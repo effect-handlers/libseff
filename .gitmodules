@@ -1,0 +1,15 @@
+[submodule "bench/libco"]
+	path = bench/libco
+	url = https://github.com/Tencent/libco.git
+[submodule "bench/cppcoro"]
+	path = bench/cppcoro
+	url = https://github.com/lewissbaker/cppcoro.git
+[submodule "bench/libhandler"]
+	path = bench/libhandler
+	url = https://github.com/koka-lang/libhandler.git
+[submodule "bench/libmprompt"]
+	path = bench/libmprompt
+	url = https://github.com/koka-lang/libmprompt.git
+[submodule "bench/cpp-effects"]
+	path = bench/cpp-effects
+	url = https://github.com/maciejpirog/cpp-effects.git
