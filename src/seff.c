@@ -46,9 +46,11 @@ void frame_push(seff_cont_t *cont, void *elt) {
 }
 
 seff_coroutine_t *seff_current_coroutine(void) { return _seff_current_coroutine; }
+#ifdef STACK_POLICY_SEGMENTED
 __asm__("seff_current_stack_top:"
         "movq %fs:0x70,%rax;"
         "ret;");
+#endif
 
 void seff_coroutine_reset(seff_coroutine_t *k) {}
 
@@ -103,12 +105,14 @@ bool seff_coroutine_init_sized(
     if (!stack) {
         return false;
     }
-    void *stack_top = (char *)stack + SEGMENT_OVERHEAD;
     k->frame_ptr = stack;
     k->resume_point.rsp = frame_rsp(stack, frame_size + SEGMENT_OVERHEAD);
     k->resume_point.rbp = NULL;
     k->resume_point.ip = (void *)coroutine_prelude;
+#ifdef STACK_POLICY_SEGMENTED
+    void *stack_top = (char *)stack + SEGMENT_OVERHEAD;
     k->resume_point.stack_top = stack_top;
+#endif
     k->resume_point.current_coroutine = k;
     k->resume_point.rbx = (void *)0xcacabbbb;
     k->resume_point.r12 = (void *)0xcaca1212;

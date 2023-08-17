@@ -66,8 +66,7 @@ eff = Struct('seff_eff_t',
     Field('payload', ptr(void))
 )
 
-cont = Struct('seff_cont_t',
-    Field('stack_top', ptr(void)),
+cont_fields = [
     Field('current_coroutine', ptr(void)),
 
     Field('rsp', ptr(void)),
@@ -79,7 +78,10 @@ cont = Struct('seff_cont_t',
     Field('r13', ptr(void)),
     Field('r14', ptr(void)),
     Field('r15', ptr(void)),
-)
+]
+if stack_policy == segmented:
+    cont_fields.insert(0, Field('stack_top', ptr(void)))
+cont = Struct('seff_cont_t', *cont_fields)
 
 coroutine_state = Enum('seff_coroutine_state_t',
     'PAUSED',

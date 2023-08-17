@@ -46,7 +46,9 @@ E __attribute__((no_split_stack)) seff_coroutine_t *seff_locate_handler(effect_i
 
 E seff_coroutine_t *seff_current_coroutine(void);
 // For debugging only. Do not use.
+#ifdef STACK_POLICY_SEGMENTED
 E void *seff_current_stack_top(void);
+#endif
 
 typedef void *(default_handler_t)(void *);
 E default_handler_t *seff_set_default_handler(effect_id effect, default_handler_t *handler);
@@ -79,19 +81,19 @@ E __attribute__((no_split_stack)) void *seff_handle(
 E void *seff_resume(seff_coroutine_t *k, void *arg);
 
 // TODO: this is architecture specific
-#define MAKE_SYSCALL_WRAPPER(ret, fn, ...)                                 \
-    ret __attribute__((no_split_stack)) fn##_syscall_wrapper(__VA_ARGS__); \
-    __asm__(#fn "_syscall_wrapper:"                                        \
-                "movq %rsp, %fs:_seff_paused_coroutine_stack@TPOFF;"       \
-                "movq %fs:_seff_system_stack@TPOFF, %rsp;"                 \
-                "movq %fs:0x70, %rax;"                                     \
-                "movq %rax, %fs:_seff_paused_coroutine_stack_top@TPOFF;"   \
-                "movq $0, %fs:0x70;"                                       \
-                "callq " #fn ";"                                           \
-                "movq %fs:_seff_paused_coroutine_stack@TPOFF, %rsp;"       \
-                "movq %fs:_seff_paused_coroutine_stack_top@TPOFF, %rcx;"   \
-                "movq %rcx, %fs:0x70;"                                     \
-                "retq;")
+#define MAKE_SYSCALL_WRAPPER(ret, fn, ...)                                                        \
+    ret __attribute__((no_split_stack)) fn##_syscall_wrapper(__VA_ARGS__);                        \
+    __asm__(#fn "_syscall_wrapper:"                                                               \
+                "movq %rsp, %fs:_seff_paused_coroutine_stack@TPOFF;"                              \
+                "movq %fs:_seff_system_stack@TPOFF, %rsp;"                                        \
+                "movq %fs:0x70, %rax;" STACK_POLICY_SWITCH(                                       \
+                    "movq %rax, %fs:_seff_paused_coroutine_stack_top@TPOFF;", "",                 \
+                    "") "movq $0, %fs:0x70;"                                                      \
+                        "callq " #fn ";"                                                          \
+                        "movq %fs:_seff_paused_coroutine_stack@TPOFF, %rsp;" STACK_POLICY_SWITCH( \
+                            "movq %fs:_seff_paused_coroutine_stack_top@TPOFF, %rcx;", "",         \
+                            "") "movq %rcx, %fs:0x70;"                                            \
+                                "retq;")
 
 #define EFF_ID(name) __##name##_eff_id
 #define EFF_PAYLOAD_T(name) __##name##_eff_payload

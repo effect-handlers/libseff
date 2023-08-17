@@ -21,8 +21,8 @@ CXX := clang++-10
 PY := python3
 LD := $(shell which ld.gold)
 
-FLAGS.debug := -O0 -Wall -Wunreachable-code -gdwarf-4
-FLAGS.release := -O3 -Wall -Wunreachable-code -gdwarf-4 -DNDEBUG
+FLAGS.debug := -O0 -Wall -Wunreachable-code
+FLAGS.release := -O3 -Wall -Wunreachable-code -DNDEBUG
 FLAGS := ${FLAGS.${BUILD}} -pedantic -pthread \
 	-Wno-gnu-empty-struct \
 	-Wno-gnu-zero-variadic-macro-arguments \
@@ -32,9 +32,7 @@ FLAGS := ${FLAGS.${BUILD}} -pedantic -pthread \
 	-Wno-fixed-enum-extension \
 	-Wno-return-stack-address \
 	-Wno-zero-length-array \
-	-Wno-unreachable-code-loop-increment \
-	-fPIC \
-	-D_GNU_SOURCE
+	-Wno-unreachable-code-loop-increment
 
 LIBSEFF_LINK_LIBS := ${ROOT_DIR}/output/lib/libseff.a ${ROOT_DIR}/output/lib/libutils.a
 

@@ -19,7 +19,7 @@ void *myThreadFun(void *vargp) {
 
 #define THREADS 20000
 #define REPS 1000
-int main() {
+int main(void) {
     pthread_t thread_id[THREADS];
     for (int i = 0; i < REPS; i++) {
         printf("Before %d Threads, Rep %d\n", THREADS, i);

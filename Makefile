@@ -20,9 +20,9 @@ CXX := clang++-10
 PY  := python3
 LD  := $(shell which ld.gold)
 
-FLAGS.debug   := -O0 -Wall -Wunreachable-code -gdwarf-4
-FLAGS.release := -O3 -Wall -Wunreachable-code -gdwarf-4 -DNDEBUG
-FLAGS         := ${FLAGS.${BUILD}}
+FLAGS.debug   := -O0
+FLAGS.release := -O3 -DNDEBUG
+FLAGS         := ${FLAGS.${BUILD}} -Wall -Wunreachable-code
 
 CFLAGSCOMMON := $(FLAGS) -pedantic -pthread \
 	-Wno-gnu-empty-struct \
@@ -30,24 +30,22 @@ CFLAGSCOMMON := $(FLAGS) -pedantic -pthread \
 	-Wno-gnu-statement-expression \
 	-Wno-gnu-empty-initializer \
 	-Wno-gnu-folding-constant \
-	-Wno-fixed-enum-extension \
-	-fPIC \
-	-D_GNU_SOURCE
+	-Wno-fixed-enum-extension
 
-CFLAGS.segmented := $(CFLAGSCOMMON) -std=gnu11 -fsplit-stack
-CFLAGS.vmmem     := $(CFLAGSCOMMON) -std=gnu11
-CFLAGS.fixed     := $(CFLAGSCOMMON) -std=gnu11
-CFLAGS           := ${CFLAGS.${STACK_POLICY}}
+CFLAGS.segmented := -fsplit-stack
+CFLAGS.vmmem     :=
+CFLAGS.fixed     :=
+CFLAGS           := $(CFLAGSCOMMON) -std=gnu11 ${CFLAGS.${STACK_POLICY}}
 
-CXXFLAGS.segmented := $(FLAGS) -std=c++17 -fsplit-stack
-CXXFLAGS.vmmem     := $(FLAGS) -std=c++17
-CXXFLAGS.fixed     := $(FLAGS) -std=c++17
-CXXFLAGS           := ${CXXFLAGS.${STACK_POLICY}}
+CXXFLAGS.segmented := -fsplit-stack
+CXXFLAGS.vmmem     :=
+CXXFLAGS.fixed     :=
+CXXFLAGS           := $(FLAGS) -std=c++17 ${CXXFLAGS.${STACK_POLICY}}
 
-LDFLAGS.segmented := -fuse-ld=$(LD) -L./output
-LDFLAGS.vmmem     := -fuse-ld=$(LD) -L./output
-LDFLAGS.fixed     := -fuse-ld=$(LD) -L./output
-LDFLAGS           := ${LDFLAGS.${STACK_POLICY}}
+LDFLAGS.segmented :=
+LDFLAGS.vmmem     :=
+LDFLAGS.fixed     :=
+LDFLAGS           := -fuse-ld=$(LD) -L./output ${LDFLAGS.${STACK_POLICY}}
 
 .PHONY: all test bench clean
 
@@ -63,11 +61,18 @@ src/seff_types.h: decls/seff_types.py decls/generate.py
 asm/seff_types.S: decls/seff_types.py decls/generate.py
 	$(GENERATE_PY)
 
-output/seff.o: src/seff.c src/seff.h src/seff_types.h | output/lib
+output/seff.o: src/seff.c src/seff.h src/seff_types.h | output
 	$(CC) $(CFLAGS) -I./src -o output/seff.o -c src/seff.c
 
-output/seff_asm.o: asm/seff.S asm/seff_types.S | output/lib
-	$(CC) $(FLAGS) -I./asm -o output/seff_asm.o -c asm/seff.S
+output/seff_asm.o: asm/seff.S asm/seff_types.S | output
+	$(CC) $(CFLAGS) -I./asm -o output/seff_asm.o -c asm/seff.S
+
+output/seff_mem.o: src/mem/seff_mem_${STACK_POLICY}.c src/mem/seff_mem.h src/seff_types.h | output
+	$(CC) $(CFLAGS) -I./src -o output/seff_mem.o -c src/mem/seff_mem_${STACK_POLICY}.c
+
+output/seff_mem_asm.o: src/mem/seff_mem_${STACK_POLICY}.S | output
+	$(CC) $(CFLAGS) -I./src -o output/seff_mem_asm.o -c src/mem/seff_mem_${STACK_POLICY}.S
+
 
 output/actors.o: src/seff.h src/seff_types.h utils/scheduler.h utils/actors.h utils/actors.c | output/lib
 	$(CC) $(CFLAGS) -I./src -I./utils -o output/actors.o -c utils/actors.c
@@ -120,14 +125,8 @@ clean:
 		$(MAKE) -C $${bench_dir} clean ; \
 	done
 
-output/seff_mem.o: src/mem/seff_mem_${STACK_POLICY}.c src/mem/seff_mem.h src/seff_types.h | output
-	$(CC) $(CFLAGSCOMMON) -I./src -o output/seff_mem.o -c src/mem/seff_mem_${STACK_POLICY}.c
-
-output/seff_mem_asm.o: src/mem/seff_mem_${STACK_POLICY}.S | output
-	$(CC) $(CFLAGSCOMMON) -I./src -o output/seff_mem_asm.o -c src/mem/seff_mem_${STACK_POLICY}.S
-
-output/lib/libseff.a: output/seff_mem.o output/seff_mem_asm.o output/seff.o output/seff_asm.o
+output/lib/libseff.a: output/seff_mem.o output/seff_mem_asm.o output/seff.o output/seff_asm.o | output/lib
 	ar -rcs output/lib/libseff.a output/seff_mem.o output/seff_mem_asm.o output/seff.o output/seff_asm.o
 
-output/lib/libutils.a: output/actors.o output/cl_queue.o | output
+output/lib/libutils.a: output/actors.o output/cl_queue.o | output/lib
 	ar -rcs output/lib/libutils.a output/actors.o output/cl_queue.o

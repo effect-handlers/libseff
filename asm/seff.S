@@ -15,7 +15,9 @@
 # 
 #include "seff_types.S"
 
+#ifdef STACK_POLICY_SEGMENTED
 #define SEFF_STACK_TOP %fs:0x70
+#endif
 
 # TODO: if we add a type to these, with `.type <sym>, @function`, the tests crash
 .global seff_return
@@ -25,8 +27,10 @@
 
 .global _seff_current_coroutine
 .global _seff_system_stack
-.global _seff_paused_coroutine_stack_top
 .global _seff_paused_coroutine_stack
+#ifdef STACK_POLICY_SEGMENTED
+.global _seff_paused_coroutine_stack_top
+#endif
 
 .section .tbss
 
@@ -34,10 +38,12 @@ _seff_current_coroutine:
     .zero 8
 _seff_paused_coroutine_stack:
     .zero 8
-_seff_paused_coroutine_stack_top:
-    .zero 8
 _seff_system_stack:
     .zero 8
+#ifdef STACK_POLICY_SEGMENTED
+_seff_paused_coroutine_stack_top:
+    .zero 8
+#endif
 
 .macro swap_registers
     # Saved registers
@@ -84,16 +90,24 @@ seff_yield:
     # We get to pummel %rax, %rcx, %r9, %r10, %r11, so we use those for fast swaps
     # Note that xchg sucks
     
+#ifdef STACK_POLICY_SEGMENTED
     movq SEFF_STACK_TOP, %rax
+#endif
     movq %fs:_seff_current_coroutine@tpoff, %rcx
     
+#ifdef STACK_POLICY_SEGMENTED
     movq (seff_coroutine_t__resume_point + seff_cont_t__stack_top)(%rdi), %r9
+#endif
     movq (seff_coroutine_t__parent_coroutine)(%rdi), %r10
 
+#ifdef STACK_POLICY_SEGMENTED
     movq %r9, SEFF_STACK_TOP
+#endif
     movq %r10, %fs:_seff_current_coroutine@tpoff
 
+#ifdef STACK_POLICY_SEGMENTED
     movq %rax, (seff_coroutine_t__resume_point + seff_cont_t__stack_top)(%rdi)
+#endif
     movq %rcx, (seff_coroutine_t__resume_point + seff_cont_t__current_coroutine)(%rdi)
 
     # Save return pointer
@@ -119,16 +133,24 @@ seff_handle:
     # We get to pummel %rax, %rcx, %r9, %r10, %r11, so we use those for fast swaps
     # Note that xchg sucks
     
+#ifdef STACK_POLICY_SEGMENTED
     movq SEFF_STACK_TOP, %rax
+#endif
     movq %fs:_seff_current_coroutine@tpoff, %rcx
     
+#ifdef STACK_POLICY_SEGMENTED
     movq (seff_coroutine_t__resume_point + seff_cont_t__stack_top)(%rdi), %r9
+#endif
     movq (seff_coroutine_t__resume_point + seff_cont_t__current_coroutine)(%rdi), %r10
 
+#ifdef STACK_POLICY_SEGMENTED
     movq %r9, SEFF_STACK_TOP
+#endif
     movq %r10, %fs:_seff_current_coroutine@tpoff
 
+#ifdef STACK_POLICY_SEGMENTED
     movq %rax, (seff_coroutine_t__resume_point + seff_cont_t__stack_top)(%rdi)
+#endif
     movq %rcx, (seff_coroutine_t__parent_coroutine)(%rdi)
 
     # Save return pointer
@@ -171,8 +193,10 @@ seff_return:
     # TODO: it would be faster to avoid swapping, since we're never restarting this coroutine
     swap_registers
 
+#ifdef STACK_POLICY_SEGMENTED
     movq (seff_coroutine_t__resume_point + seff_cont_t__stack_top)(%rdi), %r10
     movq %r10, SEFF_STACK_TOP
+#endif
     movq (seff_coroutine_t__parent_coroutine)(%rdi), %r10
     movq %r10, %fs:_seff_current_coroutine@tpoff
 

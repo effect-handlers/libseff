@@ -13,8 +13,6 @@
 
 #include "../asm/seff_types.S"
 
-.text
-
 # Clang/GCC -fsplit-stack expects the address of the top of the current segment to be
 # located in %fs:0x70 (for 64 bits) or %fs:0x40 (for 32 bits). When we're not living
 # inside a coroutine, this is zeroed so the runtime thinks there's always enough space
@@ -24,13 +22,12 @@
 .global __morestack_non_split
 .global __morestack
 .global seff_mem_thread_init
-
 .global syscall_segment_size
 
 __morestack_non_split:
     # r10 := r10 + SYSCALL_SEGMENT_SIZE
     # RSP - r10 < SEFF_STACK_TOP?
-    movq (syscall_segment_size), %rax
+    movq syscall_segment_size(%rip), %rax
     addq %rax, %r10
     subq %r10, %rsp
     cmpq SEFF_STACK_TOP, %rsp

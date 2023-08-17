@@ -6,7 +6,7 @@
 
 DEFINE_EFFECT(yield_int, 1, void, { int64_t value; });
 
-void __attribute__((optnone)) syscall() {
+void __attribute__((optnone)) syscall(void) {
     // Call to free does not matter, it's just there to force allocate a big segment
     free(NULL);
 }
