@@ -22,7 +22,8 @@ PY := python3
 LD := $(shell which ld.gold)
 
 FLAGS.debug := -O0 -Wall -Wunreachable-code
-FLAGS.release := -O3 -Wall -Wunreachable-code -DNDEBUG
+FLAGS.release := -O3 -Wall -Wunreachable-code -DNDEBUG -flto=thin
+
 FLAGS := ${FLAGS.${BUILD}} -pedantic -pthread \
 	-Wno-gnu-empty-struct \
 	-Wno-gnu-zero-variadic-macro-arguments \
@@ -55,11 +56,11 @@ CXXFLAGS_CPPCORO     := $(CXXFLAGS) -std=c++20 $(CPPCORO_INCLUDE_DIRS)
 CXXFLAGS_LIBCO       := $(CXXFLAGS) -std=c++17 $(LIBCO_INCLUDE_DIRS)
 CXXFLAGS_CPP-EFFECTS := $(CXXFLAGS) -std=c++20 $(CPP-EFFECTS_INCLUDE_DIRS)
 
-LDFLAGS             := -L${ROOT_DIR}/output -fuse-ld=$(LD)
+LDFLAGS             :=  -L${ROOT_DIR}/output -fuse-ld=$(LD) -flto=thin
 LDFLAGS_LIBSEFF     := $(LIBSEFF_LINK_LIBS) $(LDFLAGS)
 LDFLAGS_LIBCO       := -L${DEPS_DIR}/libco/lib $(LDFLAGS) -lcolib
 LDFLAGS_CPPCORO     := -L${DEPS_DIR}/cppcoro/build/ $(LDFLAGS) -lcppcoro
-LDFLAGS_LIBMPROMPT  := -L${DEPS_DIR}/libmprompt/out $(LDFLAGS) -lmprompt -lmpeff
+LDFLAGS_LIBMPROMPT  :=  -L${DEPS_DIR}/libmprompt/out $(LDFLAGS) -lmprompt -lmpeff -lpthread
 LDFLAGS_LIBHANDLER  := -L${DEPS_DIR}/libhandler/out/${CC}-amd64-pc-linux-gnu/${BUILD} $(LDFLAGS) -lhandler
 LDFLAGS_CPP-EFFECTS := $(LDFLAGS) -lboost_context
 

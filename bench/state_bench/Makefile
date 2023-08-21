@@ -1,4 +1,4 @@
-all: output/libseff output/libseff_direct output/c output/cpp-effects output/libhandler
+all: output/libseff output/libseff_direct output/c output/cpp-effects output/libhandler output/libmpeff
 
 include ../common.mk
 
@@ -16,3 +16,6 @@ output/cpp-effects: cpp-effects.cpp | output
 
 output/libhandler: libhandler.c $(LIBHANDLER_LIB) | output
 	$(CC) $(CFLAGS_LIBHANDLER) libhandler.c -o $@ $(LDFLAGS_LIBHANDLER)
+
+output/libmpeff: libmpeff.c $(LIBMPEFF_LIB) | output
+	$(CC) $(CFLAGS_LIBMPROMPT) libmpeff.c -o $@ $(LDFLAGS_LIBMPROMPT)
