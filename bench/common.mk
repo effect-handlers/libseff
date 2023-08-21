@@ -36,7 +36,7 @@ FLAGS := ${FLAGS.${BUILD}} -pedantic -pthread \
 
 LIBSEFF_LINK_LIBS := ${ROOT_DIR}/output/lib/libseff.a ${ROOT_DIR}/output/lib/libutils.a
 
-LIBSEFF_INCLUDE_DIRS     := -I${ROOT_DIR}/src -I${ROOT_DIR}/libgcc -I${ROOT_DIR}/utils
+LIBSEFF_INCLUDE_DIRS     := -I${ROOT_DIR}/src -I${ROOT_DIR}/utils
 LIBMPROMPT_INCLUDE_DIRS  := -I${DEPS_DIR}/libmprompt/include
 LIBHANDLER_INCLUDE_DIRS  := -I${DEPS_DIR}/libhandler/inc
 CPPCORO_INCLUDE_DIRS     := -I${DEPS_DIR}/cppcoro/include
@@ -57,7 +57,7 @@ CXXFLAGS_CPP-EFFECTS := $(CXXFLAGS) -std=c++20 $(CPP-EFFECTS_INCLUDE_DIRS)
 
 LDFLAGS             := -L${ROOT_DIR}/output -fuse-ld=$(LD)
 LDFLAGS_LIBSEFF     := $(LIBSEFF_LINK_LIBS) $(LDFLAGS)
-LDFLAGS_LIBCO       := -L${DEPS_DIR}/libco/lib $(LDFLAGS) -lcolib
+LDFLAGS_LIBCO       := -L${DEPS_DIR}/libco/lib $(LDFLAGS) -ldl -lcolib
 LDFLAGS_CPPCORO     := -L${DEPS_DIR}/cppcoro/build/ $(LDFLAGS) -lcppcoro
 LDFLAGS_LIBMPROMPT  := -L${DEPS_DIR}/libmprompt/out $(LDFLAGS) -lmprompt -lmpeff
 LDFLAGS_LIBHANDLER  := -L${DEPS_DIR}/libhandler/out/${CC}-amd64-pc-linux-gnu/${BUILD} $(LDFLAGS) -lhandler
