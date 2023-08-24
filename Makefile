@@ -22,7 +22,7 @@ LD  := $(shell which ld.gold)
 
 FLAGS.debug   := -O0
 FLAGS.release := -O3 -DNDEBUG
-FLAGS         := ${FLAGS.${BUILD}} -Wall -Wunreachable-code
+FLAGS         := ${FLAGS.${BUILD}} -g -Wall -Wunreachable-code
 
 CFLAGSCOMMON := $(FLAGS) -pedantic -pthread \
 	-Wno-gnu-empty-struct \

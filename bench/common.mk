@@ -21,10 +21,10 @@ CXX := clang++-10
 PY := python3
 LD := $(shell which ld.gold)
 
-FLAGS.debug := -O0 -Wall -Wunreachable-code
-FLAGS.release := -O3 -Wall -Wunreachable-code -DNDEBUG -flto=thin
+FLAGS.debug := -O0
+FLAGS.release := -O3 -DNDEBUG -flto=thin
 
-FLAGS := ${FLAGS.${BUILD}} -pedantic -pthread \
+FLAGS := ${FLAGS.${BUILD}} -g -Wall -Wunreachable-code -pedantic -pthread \
 	-Wno-gnu-empty-struct \
 	-Wno-gnu-zero-variadic-macro-arguments \
 	-Wno-gnu-statement-expression \
