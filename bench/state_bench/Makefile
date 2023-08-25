@@ -1,10 +1,11 @@
-all: all_libseff all_native all_cpp-effects all_libhandler all_libmpeff
+all: all_libseff all_native all_cpp-effects all_libhandler all_libmpeff all_libmprompt
 all_libseff: output/libseff output/libseff_direct
 all_native: output/c
 all_cpp-effects: output/cpp-effects
 all_libhandler: output/libhandler_tail_noop output/libhandler_tail  output/libhandler_general
 # output/libhandler_scoped Removed since there appears to be a bug
 all_libmpeff: output/libmpeff_tail_noop output/libmpeff_tail output/libmpeff_scoped_once output/libmpeff_scoped output/libmpeff_once output/libmpeff_multi
+all_libmprompt: output/libmprompt
 
 include ../common.mk
 
@@ -59,3 +60,6 @@ output/libmpeff_once: libmpeff.c $(LIBMPEFF_LIB) | output
 # MPE_OP_MULTI
 output/libmpeff_multi: libmpeff.c $(LIBMPEFF_LIB) | output
 	$(CC) $(CFLAGS_LIBMPROMPT) -DHANDLER_KIND=MPE_OP_MULTI libmpeff.c -o $@ $(LDFLAGS_LIBMPROMPT)
+
+output/libmprompt: libmprompt.c $(LIBMPROMPT_LIB) | output
+	$(CC) $(CFLAGS_LIBMPROMPT) libmprompt.c -o $@ $(LDFLAGS_LIBMPROMPT)
