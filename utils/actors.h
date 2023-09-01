@@ -40,8 +40,8 @@ bool actor_insert_msg(actor_t *actor, void *msg);
 bool actor_has_msg(actor_t *actor);
 void *actor_remove_msg(actor_t *actor);
 
-void *recv(actor_t *act);
-void send(actor_t *target, void *msg);
+void *actor_recv(actor_t *act);
+void actor_send(actor_t *target, void *msg);
 actor_t *fork_actor(actor_fn_t *behavior);
 
 #endif

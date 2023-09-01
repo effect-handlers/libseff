@@ -73,7 +73,7 @@ void *actor_remove_msg(actor_t *actor) {
     return result;
 }
 
-void *recv(actor_t *act) {
+void *actor_recv(actor_t *act) {
     void *msg = actor_remove_msg(act);
     while (!msg) {
         PERFORM(yield);
@@ -81,7 +81,7 @@ void *recv(actor_t *act) {
     }
     return msg;
 }
-void send(actor_t *target, void *msg) {
+void actor_send(actor_t *target, void *msg) {
     while (!actor_insert_msg(target, msg)) {
         // Wait until there is space in the target's mailbox
         PERFORM(yield);

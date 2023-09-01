@@ -27,7 +27,7 @@ typedef struct {
 void* chameneos_wrapper(seff_coroutine_t *k, struct actor_t *self){
     // receive initial info
 
-    chameneos_init_t *info = recv(self);
+    chameneos_init_t *info = actor_recv(self);
     actor_t* broker = info->broker;
     chameneos_init_effect_t effect_info;
     effect_info.col = info->col;
@@ -46,10 +46,10 @@ void* chameneos_wrapper(seff_coroutine_t *k, struct actor_t *self){
                 msg->finish = false;
                 msg->payload.mating.chameneos = (actor_t *)payload.self;
                 msg->payload.mating.col = payload.msg;
-                send(broker, msg);
+                actor_send(broker, msg);
 
                 //  receive mate or end (1)
-                chameneos_meet_actor_t* other_mate = recv(self);
+                chameneos_meet_actor_t* other_mate = actor_recv(self);
                 chameneos_meet_t meetMsg;
 
                 if (other_mate == (chameneos_meet_actor_t*)1) {
@@ -75,7 +75,7 @@ void* chameneos_wrapper(seff_coroutine_t *k, struct actor_t *self){
     broker_message_t* msg = malloc(sizeof(broker_message_t));
     msg->finish = true;
     msg->payload.final_meetings = (uintptr_t)mate;
-    send(broker, msg);
+    actor_send(broker, msg);
 
     return NULL;
 }
@@ -88,7 +88,7 @@ typedef struct {
 } broker_init_t;
 
 void* broker_fn(seff_coroutine_t *k, struct actor_t *self){
-    broker_init_t* init = recv(self);
+    broker_init_t* init = actor_recv(self);
 
     int meetings = init->meetings;
     size_t creatures = init->numberOfCreatures;
@@ -108,38 +108,38 @@ void* broker_fn(seff_coroutine_t *k, struct actor_t *self){
         chameneos_init_t* msg = malloc(sizeof(chameneos_init_t));
         msg->broker = self;
         msg->col = creatureColours[i];
-        send(actors[i], (void*)msg);
+        actor_send(actors[i], (void*)msg);
     }
 
 
     // Mate pairs
     for (int i = 0; i < meetings; i++){
-        broker_message_t *first = recv(self);
+        broker_message_t *first = actor_recv(self);
         assert(!first->finish);
         chameneos_meet_actor_t* first_message = malloc(sizeof(chameneos_meet_actor_t));
         *first_message = first->payload.mating;
 
-        broker_message_t *second = recv(self);
+        broker_message_t *second = actor_recv(self);
         assert(!second->finish);
         chameneos_meet_actor_t* second_message = malloc(sizeof(chameneos_meet_actor_t));
         *second_message = second->payload.mating;
 
-        send(first->payload.mating.chameneos, second_message);
-        send(second->payload.mating.chameneos, first_message );
+        actor_send(first->payload.mating.chameneos, second_message);
+        actor_send(second->payload.mating.chameneos, first_message );
         free(first);
         free(second);
     }
 
     // Finalize chameneos
     for (int i = 0; i < creatures; i++){
-        send(actors[i], (void*)1);
+        actor_send(actors[i], (void*)1);
     }
 
     // wait till all done
     int remaining = creatures;
     int total_meetings = 0;
     while (remaining){
-        broker_message_t* ans = recv(self);
+        broker_message_t* ans = actor_recv(self);
         if (ans->finish) {
             remaining--;
             total_meetings += ans->payload.final_meetings;
