@@ -97,9 +97,10 @@ if stack_policy == segmented:
         Field('prev', ptr(unsized_named_ty('struct _seff_stack_segment_t'))), # This should be improved
         Field('next', ptr(unsized_named_ty('struct _seff_stack_segment_t'))), # This should be improved
         Field('size', arch.size_t),
-        # Padding to allow __morestack to run
-        # TODO: OBTAINED EMPIRICALLY, figure out how to reduce this
-        Field('padding', arr(byte, 8 * 6)),
+        # Padding to allow __morestack to run and to host the red zone mandated by
+        # the x64 ABI
+        # TODO: figure out if we can reduce this
+        Field('padding', arr(byte, 128)),
     )
     frame_ptr = Typedef('seff_frame_ptr_t', ptr(stack_segment.ty))
 else:
