@@ -1,18 +1,18 @@
-# 
+#
 # Copyright (c) 2023 Huawei Technologies Co., Ltd.
-# 
+#
 # libseff is licensed under Mulan PSL v2.
-# You can use this software according to the terms and conditions of the Mulan PSL v2. 
+# You can use this software according to the terms and conditions of the Mulan PSL v2.
 # You may obtain a copy of Mulan PSL v2 at:
-# 	    http://license.coscl.org.cn/MulanPSL2 
+# 	    http://license.coscl.org.cn/MulanPSL2
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
-# FIT FOR A PARTICULAR PURPOSE.  
+# FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
 #
 # Architecture-specific code for context-switching
 # This file is for the System V (Linux/OSX) 64 bit architecture
-# 
+#
 #include "seff_types.S"
 
 #ifdef STACK_POLICY_SEGMENTED
@@ -77,7 +77,7 @@ _seff_paused_coroutine_stack_top:
     movq %rax, %rbp
     movq %rcx, %rsp
 .endm
-    
+
 .text
 
 # void* seff_yield(seff_coroutine_t* self, void* arg)
@@ -89,12 +89,12 @@ seff_yield:
 
     # We get to pummel %rax, %rcx, %r9, %r10, %r11, so we use those for fast swaps
     # Note that xchg sucks
-    
+
 #ifdef STACK_POLICY_SEGMENTED
     movq SEFF_STACK_TOP, %rax
 #endif
     movq %fs:_seff_current_coroutine@tpoff, %rcx
-    
+
 #ifdef STACK_POLICY_SEGMENTED
     movq (seff_coroutine_t__resume_point + seff_cont_t__stack_top)(%rdi), %r9
 #endif
@@ -132,12 +132,12 @@ seff_handle:
 
     # We get to pummel %rax, %rcx, %r9, %r10, %r11, so we use those for fast swaps
     # Note that xchg sucks
-    
+
 #ifdef STACK_POLICY_SEGMENTED
     movq SEFF_STACK_TOP, %rax
 #endif
     movq %fs:_seff_current_coroutine@tpoff, %rcx
-    
+
 #ifdef STACK_POLICY_SEGMENTED
     movq (seff_coroutine_t__resume_point + seff_cont_t__stack_top)(%rdi), %r9
 #endif
@@ -164,7 +164,7 @@ seff_handle:
     test %rcx, %rcx
     jnz seff_handle_after_store_system_stack
     movq %rsp, %fs:_seff_system_stack@tpoff
-seff_handle_after_store_system_stack:   
+seff_handle_after_store_system_stack:
 
     # Stack
     swap_stack
@@ -204,6 +204,14 @@ seff_return:
 
     movq (seff_coroutine_t__resume_point + seff_cont_t__rbp)(%rdi), %rbp
     movq (seff_coroutine_t__resume_point + seff_cont_t__rsp)(%rdi), %rsp
+
+#ifndef NDEBUG
+    # Cleaning up
+    movq $0x0, (seff_coroutine_t__resume_point + seff_cont_t__ip)(%rdi)
+
+    movq $0x0, (seff_coroutine_t__resume_point + seff_cont_t__rbp)(%rdi)
+    movq $0x0, (seff_coroutine_t__resume_point + seff_cont_t__rsp)(%rdi)
+#endif
 
     movq %rsi, %rax
     jmp *%r10

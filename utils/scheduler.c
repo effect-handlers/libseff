@@ -126,7 +126,7 @@ void handle_request(scheduler_thread_t *self, task_t *task) {
     task->replied_events = 0;
     if (task->cont->state == FINISHED) {
         seff_coroutine_delete(task->cont);
-        atomic_fetch_sub_explicit(&scheduler->remaining_tasks, 1, memory_order_relaxed);
+        atomic_fetch_sub_explicit(&scheduler->remaining_tasks, 1, memory_order_seq_cst);
     } else {
         switch (request->id) {
             CASE_EFFECT(request, yield, {
@@ -163,7 +163,7 @@ void *worker_thread(void *args) {
 #ifdef SCHEDULER_POLICY_WORK_STEALING
     const size_t n_threads = scheduler->n_threads;
 #endif
-    while (atomic_load_explicit(&scheduler->remaining_tasks, memory_order_relaxed) > 0) {
+    while (atomic_load_explicit(&scheduler->remaining_tasks, memory_order_seq_cst) > 0) {
         task_t task = queue_dequeue(task_queue);
 #ifdef SCHEDULER_POLICY_WORK_STEALING
         if (!task.cont && queue_size(task_queue) > 0) {
