@@ -17,6 +17,7 @@
 
 #include <assert.h>
 #include <stdatomic.h>
+#include <string.h>
 
 typedef struct {
     task_t task;
@@ -32,13 +33,18 @@ typedef struct queue_t {
     _Atomic int64_t write_loc_a;
 } queue_t;
 
+// We use it to compare against non filled tasks
+task_t zeroed_task;
 bool queue_init(queue_t *queue, size_t capacity) {
+#ifndef NDEBUG
+    memset(&zeroed_task, 0, sizeof(task_t));
+#endif
     queue->tasks = calloc(capacity, sizeof(queue_node_t));
     if (!queue->tasks)
         return false;
     for (int i = 0; i < capacity; i++){
 #ifndef NDEBUG
-        queue->tasks[i].task = (task_t){NULL};
+        memset(&queue->tasks[i].task, 0, sizeof(task_t));
 #endif
         atomic_store(&queue->tasks[i].valid, false);
     }
@@ -54,6 +60,7 @@ bool queue_empty(queue_t *queue) { return queue_size(queue) == 0; }
 
 _Atomic int n_enqueue;
 _Atomic int n_enqueue_fail;
+
 int n_enqueues(void) { return atomic_load(&n_enqueue); }
 int n_failed_enqueues(void) { return atomic_load(&n_enqueue_fail); }
 
@@ -72,8 +79,8 @@ bool queue_enqueue(queue_t *queue, task_t task) {
     int64_t write_loc_val = atomic_fetch_add_explicit(&queue->write_loc_a, 1, memory_order_relaxed);
     int64_t write_loc = write_loc_val % queue->capacity;
 #ifndef NDEBUG
-    assert(queue->tasks[write_loc].task.cont == NULL);
-    assert(task.cont != NULL);
+    assert(memcmp(&queue->tasks[write_loc].task, &zeroed_task, sizeof(task_t)) == 0);
+    assert(memcmp(&task, &zeroed_task, sizeof(task_t)) != 0);
 #endif
     queue->tasks[write_loc].task = task;
     bool flag = atomic_fetch_or_explicit(&queue->tasks[write_loc].valid, true, memory_order_seq_cst);
@@ -93,34 +100,11 @@ task_t queue_dequeue(queue_t *queue) {
 
     task_t task = queue->tasks[queue->read_loc].task;
 #ifndef NDEBUG
-    assert(task.cont != NULL);
-    queue->tasks[queue->read_loc].task.cont = NULL;
+    assert(memcmp(&task, &zeroed_task, sizeof(task_t)) != 0);
+    memset(&queue->tasks[queue->read_loc].task, 0, sizeof(task_t));
 #endif
     atomic_fetch_sub_explicit(&queue->occupied_a, 1, memory_order_seq_cst);
     queue->read_loc = (queue->read_loc + 1) % queue->capacity;
-    atomic_fetch_sub_explicit(&queue->size, 1, memory_order_relaxed);
-    return task;
-}
-
-task_t queue_dequeue_at(queue_t *queue, size_t loc) {
-    bool flag = atomic_load(&queue->tasks[loc].valid);
-    if (!flag){
-        return (task_t){0};
-    }
-    task_t task = queue->tasks[loc].task;
-
-    bool read_loc_flag = atomic_fetch_and(&queue->tasks[queue->read_loc].valid, false);
-    if (read_loc_flag){
-        queue->tasks[loc].task = queue->tasks[queue->read_loc].task;
-        atomic_store(&queue->tasks[loc].valid, false);
-    }
-
-#ifndef NDEBUG
-    queue->tasks[queue->read_loc].task.cont = NULL;
-#endif
-    queue->read_loc = (queue->read_loc + 1) % queue->capacity;
-
-    atomic_fetch_sub_explicit(&queue->occupied_a, 1, memory_order_seq_cst);
     atomic_fetch_sub_explicit(&queue->size, 1, memory_order_relaxed);
     return task;
 }

@@ -13,3 +13,9 @@
 [submodule "bench/cpp-effects"]
 	path = bench/cpp-effects
 	url = https://github.com/maciejpirog/cpp-effects.git
+[submodule "bench/wrk2"]
+	path = bench/wrk2
+	url = https://github.com/giltene/wrk2.git
+[submodule "bench/picohttpparser"]
+	path = bench/picohttpparser
+	url = https://github.com/h2o/picohttpparser.git

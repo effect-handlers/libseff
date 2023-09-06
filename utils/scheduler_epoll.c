@@ -97,14 +97,14 @@ bool scheduler_init(scheduler_t *self, size_t n_threads, size_t max_task_queue_s
     return true;
 }
 
-#define MAX_TASKS 500
-_Thread_local size_t next_task = 0;
-_Thread_local _task_t tasks[MAX_TASKS];
+// #define MAX_TASKS 200000
+// _Thread_local size_t next_task = 0;
+// _Thread_local _task_t tasks[MAX_TASKS];
 void scheduler_schedule(scheduler_t *scheduler, seff_start_fun_t fn, void *arg, int64_t thread_id) {
     seff_coroutine_t *k = seff_coroutine_new(fn, arg);
-    // task_t task = malloc(sizeof(_task_t));
-    task_t task = &tasks[next_task];
-    next_task = (next_task + 1) % MAX_TASKS;
+    task_t task = malloc(sizeof(_task_t));
+    // task_t task = &tasks[next_task];
+    // next_task = (next_task + 1) % MAX_TASKS;
     task->watched_fd = -1;
     task->watched_events = 0;
     task->ready_events = 0;
@@ -130,12 +130,16 @@ void run_task(scheduler_thread_t *self, task_t task) {
         atomic_fetch_sub_explicit(&scheduler->remaining_tasks, 1, memory_order_relaxed);
         if (task->watched_fd != -1)
             epoll_ctl(self->epoll_fd, EPOLL_CTL_DEL, task->watched_fd, NULL);
-        // free(task);
+        free(task);
         return;
     }
+    queue_t *task_queue = &self->task_queue;
     switch (request->id) {
         CASE_EFFECT(request, yield, {
             (void)payload;
+            while (!queue_enqueue(task_queue, task)) {
+                thread_report("failed to enqueue task\n");
+            }
             break;
         });
         CASE_EFFECT(request, await, {
@@ -161,14 +165,13 @@ void run_task(scheduler_thread_t *self, task_t task) {
         });
         CASE_EFFECT(request, fork, {
             scheduler_schedule(scheduler, payload.function, payload.argument, self->thread_id);
+            while (!queue_enqueue(task_queue, task)) {
+                thread_report("failed to enqueue task\n");
+            }
             break;
         });
     default:
         assert(false);
-    }
-    queue_t *task_queue = &self->task_queue;
-    while (!queue_enqueue(task_queue, task)) {
-        thread_report("failed to enqueue task");
     }
     return;
 }
@@ -185,37 +188,37 @@ void *worker_thread(void *args) {
     self->epoll_fd = epoll_create1(0);
     struct epoll_event events[MAX_EVENTS];
     while (atomic_load_explicit(&scheduler->remaining_tasks, memory_order_relaxed) > 0) {
-        size_t available_tasks;
-        available_tasks = queue_size(task_queue);
-        if (available_tasks == 0)
-            continue;
-
-        thread_report("waiting\n");
-        int n_events = epoll_wait(self->epoll_fd, events, MAX_EVENTS, 100);
-        if (n_events < 0) {
-            thread_report("epoll error\n");
-            break;
-        }
-        thread_report("%d events\n", n_events);
-        for (size_t i = 0; i < n_events; i++) {
-            task_t watcher = (task_t)events[i].data.ptr;
-            watcher->ready_events |= events[i].events;
-        }
-
-        // Check each available task to see if it can run
-        size_t read_loc = task_queue->read_loc;
-        for (size_t i = 0; i < available_tasks; i++) {
-            int64_t loc = (read_loc + i) % task_queue->capacity;
-            if (can_run(task_queue->tasks[loc])) {
-                task_t task = queue_dequeue_at(task_queue, loc);
-                thread_report("running task\n");
-                run_task(self, task);
-                task->ready_events = 0;
+        task_t task = queue_dequeue(task_queue);
+        if (task){
+            // There's a valid task
+            run_task(self, task);
+            task->ready_events = 0;
+        } else {
+            // The queue is empty, wait and add to queue
+            // Instead of 1 we should reserve spaces on the queue, epoll_wait
+            // on the number of spaces reserved, and then add the tasks
+            // that are ready, and release spaces not used
+            int n_events = epoll_wait(self->epoll_fd, events, 1, 0);
+            if (n_events < 0) {
+                threadsafe_printf("epoll error\n");
+                break;
             }
+            for (size_t i = 0; i < n_events; i++) {
+                task_t watcher = (task_t)events[i].data.ptr;
+                watcher->ready_events |= events[i].events;
+                if (can_run(watcher)){
+                    epoll_ctl(self->epoll_fd, EPOLL_CTL_DEL, watcher->watched_fd, NULL);
+                    watcher->watched_fd = -1;
+                    while (!queue_enqueue(task_queue, watcher)) {
+                        threadsafe_printf("failed to enqueue task\n");
+                    }
+                }
+            }
+
         }
     }
 
-    thread_report("exiting\n");
+    threadsafe_printf("exiting with %ld remaining tasks\n", atomic_load_explicit(&scheduler->remaining_tasks, memory_order_relaxed));
 
     return NULL;
 }

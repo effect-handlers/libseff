@@ -93,10 +93,10 @@ bool scheduler_init(scheduler_t *self, size_t n_threads, size_t max_task_queue_s
     return true;
 }
 void scheduler_schedule_task(scheduler_t *scheduler, task_t task, int thread_id) {
-    atomic_fetch_add(&scheduler->remaining_tasks, 1);
+    atomic_fetch_add_explicit(&scheduler->remaining_tasks, 1, memory_order_relaxed);
     int64_t target_thread = scheduler->threads[thread_id].next_fork_thread;
 #ifdef SCHEDULER_POLICY_WORK_SPILLING
-    scheduler->threads[thread_id].next_fork_thread = (target_thread + 1) % scheduler->n_threads;
+    scheduler->threads[thread_id].next_fork_thread = (target_thread + 1) % (scheduler->n_threads - 1);
 #endif
     queue_t *thread_queue = &scheduler->threads[target_thread].task_queue;
     while (!queue_enqueue(thread_queue, task)) {
@@ -117,16 +117,14 @@ void scheduler_schedule(scheduler_t *scheduler, seff_start_fun_t *fn, void *arg,
 #else
 #define thread_report(msg, ...)
 #endif
-void handle_request(scheduler_thread_t *self, task_t *task) {
-    int64_t thread_id = self->thread_id;
-    (void)thread_id;
+void handle_request(scheduler_thread_t *self, task_t task) {
     scheduler_t *scheduler = self->scheduler;
-    seff_eff_t *request = (seff_eff_t *)seff_handle(task->cont,
-        (void *)(uintptr_t)task->replied_events, HANDLES(yield) | HANDLES(fork) | HANDLES(await));
-    task->replied_events = 0;
-    if (task->cont->state == FINISHED) {
-        seff_coroutine_delete(task->cont);
-        atomic_fetch_sub_explicit(&scheduler->remaining_tasks, 1, memory_order_seq_cst);
+    seff_eff_t *request = (seff_eff_t *)seff_handle(task.cont,
+        (void *)(uintptr_t)task.replied_events, HANDLES(yield) | HANDLES(fork) | HANDLES(await));
+    task.replied_events = 0;
+    if (task.cont->state == FINISHED) {
+        seff_coroutine_delete(task.cont);
+        atomic_fetch_sub_explicit(&scheduler->remaining_tasks, 1, memory_order_relaxed);
     } else {
         switch (request->id) {
             CASE_EFFECT(request, yield, {
@@ -134,8 +132,8 @@ void handle_request(scheduler_thread_t *self, task_t *task) {
                 break;
             });
             CASE_EFFECT(request, await, {
-                task->awaiting_fd = payload.fd;
-                task->awaiting_events = (short)payload.events;
+                task.awaiting_fd = payload.fd;
+                task.awaiting_events = (short)payload.events;
                 break;
             });
             CASE_EFFECT(request, fork, {
@@ -146,7 +144,10 @@ void handle_request(scheduler_thread_t *self, task_t *task) {
             assert(false);
         }
         queue_t *task_queue = &self->task_queue;
-        while (!queue_enqueue(task_queue, *task)) {
+
+        int64_t thread_id = self->thread_id;
+        (void)thread_id;
+        while (!queue_enqueue(task_queue, task)) {
             thread_report("failed to enqueue task");
         }
     }
@@ -163,7 +164,7 @@ void *worker_thread(void *args) {
 #ifdef SCHEDULER_POLICY_WORK_STEALING
     const size_t n_threads = scheduler->n_threads;
 #endif
-    while (atomic_load_explicit(&scheduler->remaining_tasks, memory_order_seq_cst) > 0) {
+    while (atomic_load_explicit(&scheduler->remaining_tasks, memory_order_relaxed) > 0) {
         task_t task = queue_dequeue(task_queue);
 #ifdef SCHEDULER_POLICY_WORK_STEALING
         if (!task.cont && queue_size(task_queue) > 0) {
@@ -202,7 +203,7 @@ void *worker_thread(void *args) {
                 task.awaiting_fd = -1;
             }
         }
-        handle_request(self, &task);
+        handle_request(self, task);
     }
     thread_report("exiting\n");
     return NULL;
