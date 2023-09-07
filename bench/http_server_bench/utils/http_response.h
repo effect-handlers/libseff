@@ -6,7 +6,7 @@
 /**
  * Send HTTP response to the given fd
 */
-int send_response(int fd, char *header, char *content_type, void *body, int content_length) {
+__attribute__((no_split_stack)) int send_response(int fd, char *header, char *content_type, void *body, int content_length) {
     const int max_response_size = 262144;
     char response[max_response_size];
     size_t response_length = 0;
@@ -29,7 +29,10 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     }
 
     // Send it all!
-    int rv = send(fd, response, response_length, 0);
+    int rv = send(fd, response, response_length, MSG_DONTWAIT );
+    if (rv == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)){
+        threadsafe_printf("TODO: implement this\n");
+    }
 
     return rv;
 }

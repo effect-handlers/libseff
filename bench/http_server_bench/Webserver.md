@@ -32,4 +32,4 @@ _Do we want one?_
 
 
 ### wrk command
-./bench/wrk2/wrk -t 24 -d10s -L -R 50000 -c 1000 http://localhost:10000
+./bench/wrk2/wrk -t 24 -d10s -L -R 50000 -c 1000 http://localhost:8082

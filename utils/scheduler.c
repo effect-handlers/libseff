@@ -96,7 +96,7 @@ void scheduler_schedule_task(scheduler_t *scheduler, task_t task, int thread_id)
     atomic_fetch_add_explicit(&scheduler->remaining_tasks, 1, memory_order_relaxed);
     int64_t target_thread = scheduler->threads[thread_id].next_fork_thread;
 #ifdef SCHEDULER_POLICY_WORK_SPILLING
-    scheduler->threads[thread_id].next_fork_thread = (target_thread + 1) % (scheduler->n_threads - 1);
+    scheduler->threads[thread_id].next_fork_thread = (target_thread + 1) % (scheduler->n_threads);
 #endif
     queue_t *thread_queue = &scheduler->threads[target_thread].task_queue;
     while (!queue_enqueue(thread_queue, task)) {

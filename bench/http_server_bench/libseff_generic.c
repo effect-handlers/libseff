@@ -49,6 +49,13 @@ PROF_VAR(incomplete_reqs);
 
 const char* RESPONSE_TEXT = "CHAPTER I. Down the Rabbit-Hole  Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, <and what is the use of a book,> thought Alice <without pictures or conversations?> So she was considering in her own mind (as well as she could, for the hot day made her feel very sleepy and stupid), whether the pleasure of making a daisy-chain would be worth the trouble of getting up and picking the daisies, when suddenly a White Rabbit with pink eyes ran close by her. There was nothing so very remarkable in that; nor did Alice think it so very much out of the way to hear the Rabbit say to itself, <Oh dear! Oh dear! I shall be late!> (when she thought it over afterwards, it occurred to her that she ought to have wondered at this, but at the time it all seemed quite natural); but when the Rabbit actually took a watch out of its waistcoat-pocket, and looked at it, and then hurried on, Alice started to her feet, for it flashed across her mind that she had never before seen a rabbit with either a waistcoat-pocket, or a watch to take out of it, and burning with curiosity, she ran across the field after it, and fortunately was just in time to see it pop down a large rabbit-hole under the hedge. In another moment down went Alice after it, never once considering how in the world she was to get out again. The rabbit-hole went straight on like a tunnel for some way, and then dipped suddenly down, so suddenly that Alice had not a moment to think about stopping herself before she found herself falling down a very deep well. Either the well was very deep, or she fell very slowly, for she had plenty of time as she went down to look about her and to wonder what was going to happen next. First, she tried to look down and make out what she was coming to, but it was too dark to see anything; then she looked at the sides of the well, and noticed that they were filled with cupboards......";
 
+__attribute__((no_split_stack)) int get_errno() {
+    // Nothing like defining a macro so a function call looks like a variable
+    // so that later on we need to wrap it inside a function again
+    return errno;
+}
+MAKE_SYSCALL_WRAPPER(int, get_errno);
+
 MAKE_SYSCALL_WRAPPER(int, accept4, int, void*, void*, int);
 int await_connection(int socket_fd) {
     int n_read;
@@ -59,7 +66,7 @@ int await_connection(int socket_fd) {
         // accept succesful
         return n_read;
     } else {
-        int err = errno;
+        int err = get_errno_syscall_wrapper();
         if (err != EAGAIN && err != EWOULDBLOCK) {
             // No point in waiting
             return n_read;
@@ -89,7 +96,7 @@ int await_msg(int conn_fd, char *buffer, size_t bufsz) {
         buffer[n_read] = 0;
         return n_read;
     } else {
-        int err = errno;
+        int err = get_errno_syscall_wrapper();
         if (err != EAGAIN && err != EWOULDBLOCK) {
             // No point in waiting
             return n_read;
@@ -109,6 +116,30 @@ int await_msg(int conn_fd, char *buffer, size_t bufsz) {
 }
 
 MAKE_SYSCALL_WRAPPER(size_t, send_response, int, char*, char*, void*, int);
+MAKE_SYSCALL_WRAPPER(void*, calloc, size_t, size_t);
+MAKE_SYSCALL_WRAPPER(int, close, int);
+MAKE_SYSCALL_WRAPPER(void, free, void*);
+MAKE_SYSCALL_WRAPPER(int, strncmp, const char*, const char*, size_t);
+
+typedef struct {
+    const char *buf_start;
+    size_t len;
+    const char **method;
+    size_t *method_len;
+    const char **path;
+    size_t *path_len;
+    int *minor_version;
+    struct phr_header *headers;
+    size_t *num_headers;
+    size_t last_len;
+} phr_parse_args;
+
+int phr_structed(phr_parse_args* args) {
+    return phr_parse_request(args->buf_start, args->len, args->method, args->method_len, args->path,
+                      args->path_len, args->minor_version, args->headers, args->num_headers, args->last_len);
+}
+
+MAKE_SYSCALL_WRAPPER(int, phr_structed, phr_parse_args*);
 
 
 #define BUF_SIZE 64*1024
@@ -122,7 +153,7 @@ void *connection_fun(seff_coroutine_t *self, void *_arg) {
 
     int conn_fd = (int)(uintptr_t)_arg;
     // TODO improve on this calloc
-    char* msg_buffer = calloc(BUF_SIZE, sizeof(char));
+    char* msg_buffer = calloc_syscall_wrapper(BUF_SIZE, sizeof(char));
 
     const char* method;
     size_t method_len;
@@ -134,6 +165,18 @@ void *connection_fun(seff_coroutine_t *self, void *_arg) {
     size_t buflen = 0;
     size_t prevbuflen = 0;
     int parse_ret;
+
+    phr_parse_args args;
+    args.buf_start     = msg_buffer;
+    args.len           = buflen;
+    args.method        = &method;
+    args.method_len    = &method_len;
+    args.path          = &path;
+    args.path_len      = &path_len;
+    args.minor_version = &minor_version;
+    args.headers       = headers;
+    args.num_headers   = &num_headers;
+    args.last_len      = prevbuflen;
 
     while (1) {
         int n_read = await_msg(conn_fd, msg_buffer + buflen, BUF_SIZE - buflen);
@@ -150,8 +193,9 @@ void *connection_fun(seff_coroutine_t *self, void *_arg) {
 
             // We must set it before every new call, it's used as two different things internally
             num_headers = MAX_HEADERS;
-            parse_ret = phr_parse_request(msg_buffer, buflen, &method, &method_len, &path, &path_len,
-                                &minor_version, headers, &num_headers, prevbuflen);
+            args.len = buflen;
+            args.last_len = prevbuflen;
+            parse_ret = phr_structed_syscall_wrapper(&args);
 
             if (parse_ret > 0) {
                 /* successfully parsed the request */
@@ -172,14 +216,17 @@ void *connection_fun(seff_coroutine_t *self, void *_arg) {
 
     if (parse_ret > 0){
         conn_log("server: got method %.*s path %.*s\n", (int)method_len, method, (int)path_len, path);
-        if (strncmp("/", path, path_len) == 0){
+        if (strncmp_syscall_wrapper("/", path, path_len) == 0){
             send_response_syscall_wrapper(conn_fd, "HTTP/1.1 200 OK", "text/plain", (void*)RESPONSE_TEXT, strlen(RESPONSE_TEXT));
-        } else if (strncmp("/prof", path, path_len) == 0){
-            threadsafe_printf("awaited_msgs: %d\n", PROF_LOAD(recv_msgs));
-            threadsafe_printf("awaited_msgs: %d\n", PROF_LOAD(awaited_msgs));
-            threadsafe_printf("awaited_conn: %d\n", PROF_LOAD(recv_conn));
-            threadsafe_printf("awaited_conn: %d\n", PROF_LOAD(awaited_conn));
-            threadsafe_printf("incomplete_reqs: %d\n", PROF_LOAD(incomplete_reqs));
+        } else if (strncmp_syscall_wrapper("/prof", path, path_len) == 0){
+            deb_log("awaited_msgs: %d\n", PROF_LOAD(recv_msgs));
+            deb_log("awaited_msgs: %d\n", PROF_LOAD(awaited_msgs));
+            deb_log("awaited_conn: %d\n", PROF_LOAD(recv_conn));
+            deb_log("awaited_conn: %d\n", PROF_LOAD(awaited_conn));
+            deb_log("incomplete_reqs: %d\n", PROF_LOAD(incomplete_reqs));
+
+            // TODO actually send these values as the reply
+            // These could be logging effects of the server?
             send_response_syscall_wrapper(conn_fd, "HTTP/1.1 200 OK", "text/plain", NULL, 0);
         } else {
             conn_log("Path %.*s not found\n", (int)path_len, path);
@@ -187,8 +234,8 @@ void *connection_fun(seff_coroutine_t *self, void *_arg) {
         }
     }
 
-    close(conn_fd);
-    free(msg_buffer);
+    close_syscall_wrapper(conn_fd);
+    free_syscall_wrapper(msg_buffer);
 
     return NULL;
 }
