@@ -33,3 +33,5 @@ _Do we want one?_
 
 ### wrk command
 ./bench/wrk2/wrk -t 24 -d10s -L -R 50000 -c 1000 http://localhost:8082
+
+perf record -F 500 -a -g --call-graph dwarf -- ~/Repos/retro-httpaf-bench/build/rust_hyper.exe

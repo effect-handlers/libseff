@@ -6,16 +6,16 @@
 /**
  * Send HTTP response to the given fd
 */
-__attribute__((no_split_stack)) int send_response(int fd, char *header, char *content_type, void *body, int content_length) {
+int send_response(int fd, char *header, char *content_type, void *body, int content_length) {
     const int max_response_size = 262144;
     char response[max_response_size];
     size_t response_length = 0;
     time_t t = time(NULL);
-    struct tm *tm = localtime(&t);
+    // DO NOT use localtime
+    struct tm *tm = gmtime(&t);
     char s[64];
-    strftime(s, sizeof(s), "%c", tm);
+    strftime(s, sizeof(s), "%c GMT", tm);
 
-    // memset(response, 0, sizeof(response));
     response_length += sprintf(response + response_length, "%s", header);
     response_length += sprintf(response + response_length, "\r\n");
     response_length += sprintf(response + response_length, "Date: %s\r\n", s);

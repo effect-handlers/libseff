@@ -164,7 +164,7 @@ void *worker_thread(void *args) {
 #ifdef SCHEDULER_POLICY_WORK_STEALING
     const size_t n_threads = scheduler->n_threads;
 #endif
-    while (atomic_load_explicit(&scheduler->remaining_tasks, memory_order_relaxed) > 0) {
+    while (true) {
         task_t task = queue_dequeue(task_queue);
 #ifdef SCHEDULER_POLICY_WORK_STEALING
         if (!task.cont && queue_size(task_queue) > 0) {
@@ -181,8 +181,12 @@ void *worker_thread(void *args) {
         // If none of the threads had any available tasks, this might mean all
         // the tasks were completed by another thread after we checked for
         // `remaining_tasks.load() > 0`, so loop again
-        if (!task.cont)
+        if (!task.cont){
+            if (atomic_load_explicit(&scheduler->remaining_tasks, memory_order_relaxed) == 0){
+                break;
+            }
             continue;
+        }
 
         // If the task was an `await` task, we poll the underlying file
         // descriptors and only resume the task if they're ready, otherwise
@@ -209,7 +213,7 @@ void *worker_thread(void *args) {
     return NULL;
 }
 void scheduler_start(scheduler_t *scheduler) {
-    for (size_t i = 0; i < scheduler->n_threads; i++) {
+    for (size_t i = 1; i < scheduler->n_threads; i++) {
         pthread_create(&scheduler->threads[i].thread, NULL, worker_thread, &scheduler->threads[i]);
     }
 }
@@ -217,7 +221,8 @@ bool scheduler_finished(scheduler_t *scheduler) {
     return atomic_load(&scheduler->remaining_tasks) == 0;
 }
 void scheduler_join(scheduler_t *scheduler) {
-    for (size_t i = 0; i < scheduler->n_threads; i++) {
+    worker_thread(&scheduler->threads[0]);
+    for (size_t i = 1; i < scheduler->n_threads; i++) {
         void *ret;
         pthread_join(scheduler->threads[i].thread, &ret);
     }

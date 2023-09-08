@@ -63,12 +63,12 @@ int await_connection(int socket_fd) {
 
     n_read = accept4_syscall_wrapper(socket_fd, NULL, NULL, SOCK_NONBLOCK);
     if (n_read >= 0) {
-        // accept succesful
+        // accept succesful (happy path)
         return n_read;
     } else {
         int err = get_errno_syscall_wrapper();
         if (err != EAGAIN && err != EWOULDBLOCK) {
-            // No point in waiting
+            // No point in waiting, something else made it fail
             return n_read;
         }
     }
@@ -152,8 +152,7 @@ void *connection_fun(seff_coroutine_t *self, void *_arg) {
     conn_log("Established connection to client\n");
 
     int conn_fd = (int)(uintptr_t)_arg;
-    // TODO improve on this calloc
-    char* msg_buffer = calloc_syscall_wrapper(BUF_SIZE, sizeof(char));
+    char msg_buffer[BUF_SIZE];
 
     const char* method;
     size_t method_len;
@@ -235,7 +234,6 @@ void *connection_fun(seff_coroutine_t *self, void *_arg) {
     }
 
     close_syscall_wrapper(conn_fd);
-    free_syscall_wrapper(msg_buffer);
 
     return NULL;
 }
