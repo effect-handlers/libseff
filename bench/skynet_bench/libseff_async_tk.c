@@ -7,9 +7,10 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "cl_queue.h"
+#include "tk_queue.h"
 
 #define STACK_SIZE 512
+#define TASK_QUEUE_SIZE_BASE 11
 
 typedef enum { READY, WAITING } future_state_t;
 
@@ -67,7 +68,7 @@ typedef struct worker_thread_t {
     struct async_scheduler_t *scheduler;
     pthread_t thread;
     size_t worker_id;
-    queue_t task_queue;
+    tk_queue_t task_queue;
 
 #ifndef NDEBUG
     int64_t self_task_abort;
@@ -102,7 +103,7 @@ bool async_scheduler_init(async_scheduler_t *self, size_t n_workers) {
         self->workers[i].stolen_task_empty = 0;
         self->workers[i].spinlock_fails = 0;
 #endif
-        cl_queue_init(&self->workers[i].task_queue);
+        tk_queue_init(&self->workers[i].task_queue, TASK_QUEUE_SIZE_BASE);
     }
     return true;
 }
@@ -115,19 +116,17 @@ void async_schedule(
     task->waiting = NULL;
     task->promise = promise;
     self->remaining_tasks++;
-    cl_queue_push(&self->workers[0].task_queue, task);
+    tk_queue_push(&self->workers[0].task_queue, task);
 }
 
 task_t *try_get_task(worker_thread_t *self) {
-    task_t *own_task = cl_queue_pop(&self->task_queue);
-    if (own_task != EMPTY && own_task != ABORT) {
+    task_t *own_task = tk_queue_pop(&self->task_queue);
+    if (own_task != EMPTY) {
         return own_task;
     }
 #ifndef NDEBUG
-    else if (own_task == EMPTY) {
+    else {
         self->self_task_empty++;
-    } else {
-        self->self_task_abort++;
     }
 #endif
 
@@ -137,15 +136,13 @@ task_t *try_get_task(worker_thread_t *self) {
 
     for (size_t i = 1; i < self->scheduler->n_workers; i++) {
         task_t *stolen_task =
-            cl_queue_steal(&scheduler->workers[(worker_id + i) % n_workers].task_queue);
-        if (stolen_task != EMPTY && stolen_task != ABORT) {
+            tk_queue_steal(&scheduler->workers[(worker_id + i) % n_workers].task_queue);
+        if (stolen_task != EMPTY) {
             return stolen_task;
         }
 #ifndef NDEBUG
-        else if (stolen_task == EMPTY) {
+        else {
             self->stolen_task_empty++;
-        } else {
-            self->stolen_task_abort++;
         }
 #endif
     }
@@ -190,7 +187,7 @@ void *worker_thread(void *_self) {
 
                 task_t *waiter = promise->waiter;
                 if (waiter != NULL) {
-                    cl_queue_push(&self->task_queue, waiter);
+                    tk_queue_push(&self->task_queue, waiter);
                 }
             });
 
@@ -204,7 +201,7 @@ void *worker_thread(void *_self) {
                     SPINLOCK(awaited, {
                         current_task->waiting = payload.fut;
                         if (payload.fut->state == READY) {
-                            cl_queue_push(&self->task_queue, current_task);
+                            tk_queue_push(&self->task_queue, current_task);
                         } else {
                             payload.fut->waiter = current_task;
                         }
@@ -225,8 +222,8 @@ void *worker_thread(void *_self) {
                     new_task->promise = payload.promise;
                     new_task->waiting = NULL;
 
-                    cl_queue_push(&self->task_queue, new_task);
-                    cl_queue_push(&self->task_queue, current_task);
+                    tk_queue_push(&self->task_queue, new_task);
+                    tk_queue_push(&self->task_queue, current_task);
                     break;
                 });
             default:

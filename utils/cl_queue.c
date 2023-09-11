@@ -28,7 +28,7 @@ const int64_t INITIAL_SIZE = 1 << LOG_INITIAL_SIZE;
 typedef struct circular_array_t {
     int64_t size;
     int64_t mask;
-    _Atomic(queue_elt_t) * buffer;
+    _Atomic(queue_elt_t) *buffer;
 } circular_array_t;
 
 circular_array_t *resize_array(circular_array_t *arr, int64_t bottom, int64_t top) {
@@ -60,7 +60,7 @@ void cl_queue_init(queue_t *self) {
     self->array->buffer = malloc(INITIAL_SIZE * sizeof(queue_elt_t));
 }
 
-queue_elt_t queue_pop(queue_t *self) {
+queue_elt_t cl_queue_pop(queue_t *self) {
     int64_t bottom = RELAXED(load, &self->bottom) - 1;
     circular_array_t *arr = RELAXED(load, &self->array);
     RELAXED(store, &self->bottom, bottom);
@@ -87,7 +87,7 @@ queue_elt_t queue_pop(queue_t *self) {
     return elt;
 }
 
-void queue_push(queue_t *self, queue_elt_t elt) {
+void cl_queue_push(queue_t *self, queue_elt_t elt) {
     int64_t bottom = RELAXED(load, &self->bottom);
     // Note this is *not* relaxed
     int64_t top = atomic_load_explicit(&self->top, memory_order_acquire);
@@ -105,7 +105,7 @@ void queue_push(queue_t *self, queue_elt_t elt) {
     RELAXED(store, &self->bottom, bottom + 1);
 }
 
-queue_elt_t queue_steal(queue_t *self) {
+queue_elt_t cl_queue_steal(queue_t *self) {
     int64_t top = atomic_load_explicit(&self->top, memory_order_acquire);
     atomic_thread_fence(memory_order_seq_cst);
     int64_t bottom = atomic_load_explicit(&self->bottom, memory_order_acquire);

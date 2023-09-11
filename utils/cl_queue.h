@@ -34,8 +34,8 @@ void cl_queue_init(queue_t *queue);
 #define EMPTY ((queue_elt_t)NULL)
 #define ABORT ((queue_elt_t)(~(uintptr_t)NULL))
 
-void queue_push(queue_t *queue, queue_elt_t task);
-queue_elt_t queue_pop(queue_t *queue);
-queue_elt_t queue_steal(queue_t *queue);
+void cl_queue_push(queue_t *queue, queue_elt_t task);
+queue_elt_t cl_queue_pop(queue_t *queue);
+queue_elt_t cl_queue_steal(queue_t *queue);
 
 #endif
