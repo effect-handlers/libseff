@@ -175,7 +175,7 @@ int await_send(int conn_fd, const char *buffer, size_t bufsz) {
         return -1;
 
     // Assume there's space to write
-    return recv_syscall_wrapper(conn_fd, buffer, bufsz, MSG_DONTWAIT);
+    return send_syscall_wrapper(conn_fd, buffer, bufsz, MSG_DONTWAIT);
 }
 
 int await_send_all(int conn_fd, const char *buffer, size_t bufsz){
