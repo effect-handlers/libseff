@@ -35,18 +35,20 @@ void tk_queue_init(tk_queue_t *self, size_t log_size) {
 }
 
 void tk_queue_push(tk_queue_t *self, queue_elt_t elt) {
-    circular_array_t *arr = self->array;
-    while (true) {
-        int64_t top = ACQUIRE(load, &self->top);
-        int64_t bottom = self->bottom;
+    circular_array_t *arr = RELAXED(load, &self->array);
+    int64_t top = ACQUIRE(load, &self->top);
+    int64_t bottom = self->bottom;
 
-        if (bottom - top > arr->size - 1) {
-        } else {
-            arr->buffer[bottom & arr->mask] = elt;
-            RELEASE(store, &self->bottom, bottom + 1);
-            return;
-        }
+    if (bottom - top > arr->size - 1) {
+        circular_array_t *new_array = circular_array_resize(arr, bottom, top);
+        RELAXED(store, &self->array, new_array);
+        arr = new_array;
     }
+
+    arr->buffer[bottom & arr->mask] = elt;
+    // CA_SET(arr, bottom, elt);
+    RELEASE(store, &self->bottom, bottom + 1);
+    return;
 }
 
 void tk_queue_priority_push(tk_queue_t *self, queue_elt_t elt) {

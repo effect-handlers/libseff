@@ -20,6 +20,10 @@ circular_array_t *circular_array_new(size_t log_size) {
     return new_array;
 }
 
+#define CA_GET(arr, idx) atomic_load_explicit(&arr->buffer[idx & arr->mask], memory_order_relaxed)
+#define CA_SET(arr, idx, elt) \
+    atomic_store_explicit(&arr->buffer[idx & arr->mask], elt, memory_order_relaxed)
+
 circular_array_t *circular_array_resize(circular_array_t *arr, int64_t bottom, int64_t top) {
     int64_t new_size = arr->size << 1;
     int64_t new_mask = new_size - 1;
@@ -30,11 +34,8 @@ circular_array_t *circular_array_resize(circular_array_t *arr, int64_t bottom, i
     new_array->size = new_size;
     new_array->mask = new_mask;
 
-    _Atomic(void *) *buffer = arr->buffer;
-    int64_t old_mask = arr->mask;
     for (int64_t i = top; i < bottom; i++) {
-        void *old_value = atomic_load_explicit(&buffer[i & old_mask], memory_order_relaxed);
-        atomic_store_explicit(&new_array->buffer[i & new_mask], old_value, memory_order_relaxed);
+        CA_SET(new_array, i, CA_GET(arr, i));
     }
 
     return new_array;

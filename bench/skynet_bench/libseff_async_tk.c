@@ -12,7 +12,7 @@
 #undef NDEBUG
 
 #define STACK_SIZE 512
-#define TASK_QUEUE_SIZE_BASE 10
+#define INITIAL_QUEUE_LOG_SIZE 3
 
 typedef enum { READY, WAITING } future_state_t;
 
@@ -115,7 +115,7 @@ bool async_scheduler_init(async_scheduler_t *self, size_t n_workers) {
         self->workers[i].stolen_task_empty = 0;
         self->workers[i].spinlock_fails = 0;
 #endif
-        tk_queue_init(&self->workers[i].task_queue, TASK_QUEUE_SIZE_BASE);
+        tk_queue_init(&self->workers[i].task_queue, INITIAL_QUEUE_LOG_SIZE);
     }
     return true;
 }
