@@ -22,19 +22,20 @@
 struct task_t;
 typedef struct task_t *queue_elt_t;
 
-typedef struct queue_t {
+typedef struct cl_queue_t {
     _Atomic(int64_t) top;
     _Atomic(int64_t) bottom;
     _Atomic(struct circular_array_t *) array;
-} queue_t;
+} cl_queue_t;
 
-void cl_queue_init(queue_t *queue, size_t log_size);
+void cl_queue_init(cl_queue_t *queue, size_t log_size);
 
 #define EMPTY ((queue_elt_t)NULL)
 #define ABORT ((queue_elt_t)(~(uintptr_t)NULL))
 
-void cl_queue_push(queue_t *queue, queue_elt_t task);
-queue_elt_t cl_queue_pop(queue_t *queue);
-queue_elt_t cl_queue_steal(queue_t *queue);
+void cl_queue_push(cl_queue_t *queue, queue_elt_t task);
+void cl_queue_priority_push(cl_queue_t *queue, queue_elt_t task);
+queue_elt_t cl_queue_pop(cl_queue_t *queue);
+queue_elt_t cl_queue_steal(cl_queue_t *queue);
 
 #endif

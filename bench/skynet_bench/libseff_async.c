@@ -70,7 +70,7 @@ typedef struct worker_thread_t {
     struct async_scheduler_t *scheduler;
     pthread_t thread;
     size_t worker_id;
-    queue_t task_queue;
+    cl_queue_t task_queue;
 
 #ifndef NDEBUG
     int64_t self_task_push;

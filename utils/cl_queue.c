@@ -23,13 +23,13 @@
 
 #define RELAXED(op, ...) atomic_##op##_explicit(__VA_ARGS__, memory_order_relaxed)
 
-void cl_queue_init(queue_t *self, size_t log_size) {
+void cl_queue_init(cl_queue_t *self, size_t log_size) {
     self->bottom = 0;
     self->top = 0;
     self->array = circular_array_new(log_size);
 }
 
-queue_elt_t cl_queue_pop(queue_t *self) {
+queue_elt_t cl_queue_pop(cl_queue_t *self) {
     int64_t bottom = RELAXED(load, &self->bottom) - 1;
     circular_array_t *arr = RELAXED(load, &self->array);
     RELAXED(store, &self->bottom, bottom);
@@ -56,7 +56,7 @@ queue_elt_t cl_queue_pop(queue_t *self) {
     return elt;
 }
 
-void cl_queue_push(queue_t *self, queue_elt_t elt) {
+void cl_queue_push(cl_queue_t *self, queue_elt_t elt) {
     int64_t bottom = RELAXED(load, &self->bottom);
     // Note this is *not* relaxed
     int64_t top = atomic_load_explicit(&self->top, memory_order_acquire);
@@ -73,7 +73,9 @@ void cl_queue_push(queue_t *self, queue_elt_t elt) {
     RELAXED(store, &self->bottom, bottom + 1);
 }
 
-queue_elt_t cl_queue_steal(queue_t *self) {
+void cl_queue_priority_push(cl_queue_t *self, queue_elt_t elt) { cl_queue_push(self, elt); }
+
+queue_elt_t cl_queue_steal(cl_queue_t *self) {
     int64_t top = atomic_load_explicit(&self->top, memory_order_acquire);
     atomic_thread_fence(memory_order_seq_cst);
     int64_t bottom = atomic_load_explicit(&self->bottom, memory_order_acquire);
