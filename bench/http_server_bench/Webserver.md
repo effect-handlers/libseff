@@ -22,7 +22,8 @@ _Do we want one?_
   https://github.com/giltene/wrk2
 - 10x Tokio schedules, maybe
   https://tokio.rs/blog/2019-10-scheduler
-
+- good guide on socket
+  https://beej.us/guide/bgnet/
 
 ## Ideas
 

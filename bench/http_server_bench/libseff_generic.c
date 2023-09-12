@@ -17,7 +17,7 @@
 #include "picohttpparser.h"
 #include "seff.h"
 #include "utils/http_response.h"
-#include "utils/net.h"
+#include "net.h"
 
 #ifndef NDEBUG
 #define deb_log(msg, ...) \
@@ -279,7 +279,7 @@ void print_usage(char *self) {
 
 int main(int argc, char *argv[]) {
     const char *ip = "127.0.0.1";
-    int port = 8082;
+    const char* port = "8082";
     int n_threads = 8;
 
     const char* s = getenv("LIBSEFF_THREADS");
@@ -292,26 +292,24 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[i], "--port") == 0) {
             if (i + 1 >= argc)
                 print_usage(argv[0]);
-            sscanf(argv[i + 1], "%d", &port);
+            port = argv[i + 1];
             i++;
         } else {
             print_usage(argv[0]);
         }
     }
 
-    int listen_socket_fd = open_tcp_socket(port, ip, true);
-    listen(listen_socket_fd, 1024);
+    int listen_socket_fd = listen_tcp_socket(ip, port, true, true, false, 1024);
     if (listen_socket_fd == -1) {
-        printf("Cannot listen on %s:%d\n", ip, port);
+        printf("Cannot listen on %s:%s\n", ip, port);
         return -1;
     }
-    printf("Open socket %d listening on %s:%d\n", listen_socket_fd, ip, port);
-    set_nonblock(listen_socket_fd);
+    printf("Open socket %d listening on %s:%s\n", listen_socket_fd, ip, port);
 
     scheduler_t scheduler;
     scheduler_init(&scheduler, n_threads, TASK_QUEUE_SIZE);
     printf("Initialized scheduler with %d threads\n", n_threads);
-    scheduler_schedule(&scheduler, listener_fun, (void *)(uintptr_t)listen_socket_fd, 23);
+    scheduler_schedule(&scheduler, listener_fun, (void *)(uintptr_t)listen_socket_fd, 0);
 
     scheduler_start(&scheduler);
 
