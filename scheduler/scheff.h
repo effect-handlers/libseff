@@ -24,6 +24,8 @@
 #include "seff.h"
 #include "tk_queue.h"
 
+#define QUEUE(t) cl_queue_##t
+
 #undef NDEBUG
 
 struct task_t;
@@ -55,7 +57,7 @@ typedef struct worker_thread_t {
     struct scheff_t *scheduler;
     pthread_t thread;
     size_t worker_id;
-    cl_queue_t task_queue;
+    QUEUE(t) task_queue;
 
 #ifndef NDEBUG
     int64_t self_task_push;

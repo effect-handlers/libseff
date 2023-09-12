@@ -104,7 +104,7 @@ bool scheff_init(scheff_t *self, size_t n_workers) {
             self->workers[i].stolen_task_empty = 0;
             self->workers[i].spinlock_fails = 0;
         });
-        cl_queue_init(&self->workers[i].task_queue, INITIAL_QUEUE_LOG_SIZE);
+        QUEUE(init)(&self->workers[i].task_queue, INITIAL_QUEUE_LOG_SIZE);
     }
     return true;
 }
@@ -115,11 +115,11 @@ void scheff_schedule(scheff_t *self, seff_start_fun_t fn, void *arg) {
     self->remaining_tasks++;
 
     debug(self->workers[0].self_task_push++);
-    cl_queue_push(&self->workers[0].task_queue, task);
+    QUEUE(push)(&self->workers[0].task_queue, task);
 }
 
 task_t *try_get_task(worker_thread_t *self) {
-    task_t *own_task = cl_queue_pop(&self->task_queue);
+    task_t *own_task = QUEUE(pop)(&self->task_queue);
     if (own_task != EMPTY) {
         debug(self->self_task_pop++);
         return own_task;
@@ -135,7 +135,7 @@ task_t *try_get_task(worker_thread_t *self) {
 
     for (size_t i = 1; i < self->scheduler->n_workers; i++) {
         task_t *stolen_task =
-            cl_queue_steal(&scheduler->workers[(worker_id + i) % n_workers].task_queue);
+            QUEUE(steal)(&scheduler->workers[(worker_id + i) % n_workers].task_queue);
         if (stolen_task != EMPTY && stolen_task != ABORT) {
             debug(self->stolen_task_ok++);
             return stolen_task;
@@ -150,7 +150,7 @@ task_t *try_get_task(worker_thread_t *self) {
 
 void *worker_thread(void *_self) {
     worker_thread_t *self = (worker_thread_t *)(_self);
-    cl_queue_t *task_queue = &self->task_queue;
+    QUEUE(t) *task_queue = &self->task_queue;
     _Atomic(int64_t) *remaining_tasks = &self->scheduler->remaining_tasks;
 
     // We loop forever. The actual termination condition is: inside the loop, if we've
@@ -187,7 +187,7 @@ void *worker_thread(void *_self) {
                         }
                         if (payload.fut->state == READY) {
                             debug(self->self_task_push += 1);
-                            cl_queue_push(task_queue, current_task);
+                            QUEUE(push)(task_queue, current_task);
                         } else {
                             payload.fut->waiter = current_task;
                         }
@@ -203,8 +203,8 @@ void *worker_thread(void *_self) {
                     seff_coroutine_init_sized(
                         &task->coroutine, payload.fn, payload.arg, STACK_SIZE);
                     debug(self->self_task_push += 2);
-                    cl_queue_push(task_queue, task);
-                    cl_queue_push(task_queue, current_task);
+                    QUEUE(push)(task_queue, task);
+                    QUEUE(push)(task_queue, current_task);
                     break;
                 });
                 CASE_EFFECT(request, notify, {
@@ -213,11 +213,11 @@ void *worker_thread(void *_self) {
                         payload.fut->waiter = NULL;
                         if (waiter) {
                             debug(self->self_task_push += 1);
-                            cl_queue_priority_push(task_queue, waiter);
+                            QUEUE(priority_push)(task_queue, waiter);
                         }
                     });
                     debug(self->self_task_push += 1);
-                    cl_queue_push(task_queue, current_task);
+                    QUEUE(push)(task_queue, current_task);
                     break;
                 });
             default:
