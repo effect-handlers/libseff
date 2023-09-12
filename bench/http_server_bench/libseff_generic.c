@@ -28,95 +28,8 @@
 #define conn_log(msg, ...) \
     deb_log("[connection %d]: " msg, connection_id, ##__VA_ARGS__)
 
-
-#define PROF_VAR(a) _Atomic int a
-#define PROF_INC(a) atomic_fetch_add_explicit(&a, 1, memory_order_relaxed)
-#define PROF_LOAD(a) atomic_load_explicit(&a, memory_order_relaxed)
-// Manual for now, maybe we want another compile time flag (-DPROFILE)
-// #define PROF_VAR(a)
-// #define PROF_INC(a)
-// #define PROF_LOAD(a)
-
-
-
-PROF_VAR(awaited_msgs);
-PROF_VAR(recv_msgs);
-
-PROF_VAR(awaited_conn);
-PROF_VAR(recv_conn);
-
-PROF_VAR(incomplete_reqs);
-
-PROF_VAR(opened_connections);
-PROF_VAR(closed_connections);
-
 const char* RESPONSE_TEXT = "CHAPTER I. Down the Rabbit-Hole  Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, <and what is the use of a book,> thought Alice <without pictures or conversations?> So she was considering in her own mind (as well as she could, for the hot day made her feel very sleepy and stupid), whether the pleasure of making a daisy-chain would be worth the trouble of getting up and picking the daisies, when suddenly a White Rabbit with pink eyes ran close by her. There was nothing so very remarkable in that; nor did Alice think it so very much out of the way to hear the Rabbit say to itself, <Oh dear! Oh dear! I shall be late!> (when she thought it over afterwards, it occurred to her that she ought to have wondered at this, but at the time it all seemed quite natural); but when the Rabbit actually took a watch out of its waistcoat-pocket, and looked at it, and then hurried on, Alice started to her feet, for it flashed across her mind that she had never before seen a rabbit with either a waistcoat-pocket, or a watch to take out of it, and burning with curiosity, she ran across the field after it, and fortunately was just in time to see it pop down a large rabbit-hole under the hedge. In another moment down went Alice after it, never once considering how in the world she was to get out again. The rabbit-hole went straight on like a tunnel for some way, and then dipped suddenly down, so suddenly that Alice had not a moment to think about stopping herself before she found herself falling down a very deep well. Either the well was very deep, or she fell very slowly, for she had plenty of time as she went down to look about her and to wonder what was going to happen next. First, she tried to look down and make out what she was coming to, but it was too dark to see anything; then she looked at the sides of the well, and noticed that they were filled with cupboards......";
 
-__attribute__((no_split_stack)) int get_errno() {
-    // Nothing like defining a macro so a function call looks like a variable
-    // so that later on we need to wrap it inside a function again
-    return errno;
-}
-MAKE_SYSCALL_WRAPPER(int, get_errno);
-
-MAKE_SYSCALL_WRAPPER(int, accept4, int, void*, void*, int);
-int await_connection(int socket_fd) {
-    int n_read;
-    PROF_INC(recv_conn);
-
-    n_read = accept4_syscall_wrapper(socket_fd, NULL, NULL, SOCK_NONBLOCK);
-    if (n_read >= 0) {
-        // accept succesful (happy path)
-        return n_read;
-    } else {
-        int err = get_errno_syscall_wrapper();
-        if (err != EAGAIN && err != EWOULDBLOCK) {
-            // No point in waiting, something else made it fail
-            return n_read;
-        }
-    }
-    PROF_INC(awaited_conn);
-    event_t revents = PERFORM(await, socket_fd, READ);
-    if (HANGUP & revents)
-        return 0;
-    if (!(READ & revents))
-        return -1;
-
-    n_read = accept4_syscall_wrapper(socket_fd, NULL, NULL, 0);
-
-    return n_read;
-}
-
-MAKE_SYSCALL_WRAPPER(int, recv, int, void*, size_t, int);
-
-int await_msg(int conn_fd, char *buffer, size_t bufsz) {
-    int n_read;
-    PROF_INC(recv_msgs);
-
-    n_read = recv_syscall_wrapper(conn_fd, buffer, bufsz, MSG_DONTWAIT);
-    if (n_read >= 0) {
-        // accept succesful
-        buffer[n_read] = 0;
-        return n_read;
-    } else {
-        int err = get_errno_syscall_wrapper();
-        if (err != EAGAIN && err != EWOULDBLOCK) {
-            // No point in waiting
-            return n_read;
-        }
-
-    }
-    PROF_INC(awaited_msgs);
-    event_t revents = PERFORM(await, conn_fd, READ);
-    if (HANGUP & revents)
-        return 0;
-    if (!(READ & revents))
-        return -1;
-
-    n_read = recv_syscall_wrapper(conn_fd, buffer, bufsz, 0);
-
-    return n_read;
-}
 
 MAKE_SYSCALL_WRAPPER(size_t, send_response, int, char*, char*, void*, int);
 MAKE_SYSCALL_WRAPPER(void*, calloc, size_t, size_t);
@@ -184,7 +97,7 @@ void *connection_fun(seff_coroutine_t *self, void *_arg) {
         args.last_len      = prevbuflen;
 
         while (1) {
-            int n_read = await_msg(conn_fd, msg_buffer + buflen, BUF_SIZE - buflen);
+            int n_read = await_recv(conn_fd, msg_buffer + buflen, BUF_SIZE - buflen);
             if (n_read == 0) {
                 conn_log("Connection closed by client\n");
                 close_syscall_wrapper(conn_fd);
@@ -258,7 +171,7 @@ void *listener_fun(seff_coroutine_t *self, void *_arg) {
     deb_log("Listening for connections\n");
 
     while (true) {
-        int connection_fd = await_connection(socket_fd);
+        int connection_fd = await_accept4(socket_fd);
         if (connection_fd == -1) {
             deb_log("Error while listening for connection -- did the "
                               "OS kill the socket?\n");

@@ -81,7 +81,7 @@ output/cl_queue.o: utils/cl_queue.h utils/cl_queue.c | output/lib
 	$(CC) $(CFLAGS) -I./utils -o output/cl_queue.o -c utils/cl_queue.c
 
 output/net.o: utils/net.c utils/net.h | output/lib
-	$(CC) $(CFLAGS) -I./utils -o $@ -c $<
+	$(CC) $(CFLAGS) -I./src -I./utils -o $@ -c $<
 
 output/tests/%: tests/%.c output/lib/libutils.a output/lib/libseff.a | output/tests
 	$(CC) $(CFLAGS) -I./src -I./utils -o $@.o -c $<

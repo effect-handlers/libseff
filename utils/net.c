@@ -8,6 +8,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
+#include <errno.h>
+
+#include "scheduler.h"
 
 #ifndef NDEBUG
 #define deb_log(msg, ...) \
@@ -15,6 +18,17 @@
 #else
 #define deb_log(msg, ...)
 #endif
+
+__attribute__((no_split_stack)) int get_errno() {
+    // Nothing like defining a macro so a function call looks like a variable
+    // so that later on we need to wrap it inside a function again
+    return errno;
+}
+
+MAKE_SYSCALL_WRAPPER(int, get_errno);
+MAKE_SYSCALL_WRAPPER(int, accept4, int, void*, void*, int);
+MAKE_SYSCALL_WRAPPER(int, recv, int, void*, size_t, int);
+MAKE_SYSCALL_WRAPPER(int, send, int, const void*, size_t, int);
 
 int listen_tcp_socket(const char *ip, const char *port, bool non_blocking, bool reuse_address, bool reuse_port, int listen_queue_size){
     deb_log("Getting listening TCP socket on ip: %s, port: %s\n", ip, port);
@@ -81,4 +95,100 @@ int listen_tcp_socket(const char *ip, const char *port, bool non_blocking, bool 
     }
 
     return listener;
+}
+
+
+int await_accept4(int socket_fd) {
+    // it is assumed that the socket is non blocking
+#ifndef NDEBUG
+    // assert that the socket is non blocking
+    // assert()
+#endif
+    int n_read = accept4_syscall_wrapper(socket_fd, NULL, NULL, SOCK_NONBLOCK);
+    if (n_read >= 0) {
+        // accept succesful (happy path)
+        return n_read;
+    } else {
+        int err = get_errno_syscall_wrapper();
+        if (err != EAGAIN && err != EWOULDBLOCK) {
+            // No point in waiting, something else made it fail
+            deb_log("Call to accept4 failed! returning error\n");
+            return n_read;
+        }
+    }
+
+    event_t revents = PERFORM(await, socket_fd, READ | ET);
+    if (HANGUP & revents)
+        return 0;
+    if (!(READ & revents))
+        return -1;
+
+    // There must be something here
+    return accept4_syscall_wrapper(socket_fd, NULL, NULL, SOCK_NONBLOCK);
+}
+
+
+int await_recv(int conn_fd, char *buffer, size_t bufsz) {
+    int n_read = recv_syscall_wrapper(conn_fd, buffer, bufsz, MSG_DONTWAIT);
+    if (n_read >= 0) {
+        // recv succesful
+        // TODO remove this, I don't like it
+        buffer[n_read] = 0;
+        return n_read;
+    } else {
+        int err = get_errno_syscall_wrapper();
+        if (err != EAGAIN && err != EWOULDBLOCK) {
+            // No point in waiting
+            deb_log("Call to recv failed! returning error\n");
+            return n_read;
+        }
+
+    }
+    event_t revents = PERFORM(await, conn_fd, READ | ET);
+    if (HANGUP & revents)
+        return 0;
+    if (!(READ & revents))
+        return -1;
+
+    // Assume there's data to read
+    return recv_syscall_wrapper(conn_fd, buffer, bufsz, MSG_DONTWAIT);
+}
+
+int await_send(int conn_fd, const char *buffer, size_t bufsz) {
+    int n_read = send_syscall_wrapper(conn_fd, buffer, bufsz, MSG_DONTWAIT);
+    if (n_read >= 0) {
+        // send succesful
+        return n_read;
+    } else {
+        int err = get_errno_syscall_wrapper();
+        if (err != EAGAIN && err != EWOULDBLOCK) {
+            // No point in waiting
+            deb_log("Call to send failed! returning error\n");
+            return n_read;
+        }
+
+    }
+    event_t revents = PERFORM(await, conn_fd, WRITE);
+    if (HANGUP & revents)
+        return 0;
+    if (!(WRITE & revents))
+        return -1;
+
+    // Assume there's space to write
+    return recv_syscall_wrapper(conn_fd, buffer, bufsz, MSG_DONTWAIT);
+}
+
+int await_send_all(int conn_fd, const char *buffer, size_t bufsz){
+    int total = 0; // how many bytes we've sent
+    int bytesleft = bufsz; // how many we have left to send
+    int n;
+
+    while(total < bufsz) {
+        n = await_send(conn_fd, buffer+total, bytesleft);
+        if (n == -1) { break; }
+        total += n;
+        bytesleft -= n;
+    }
+
+    return n==-1?-1:total; // return -1 on failure, 0 on success
 }

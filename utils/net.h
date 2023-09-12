@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stddef.h>
 
 /**
  * Prepares a TCP socket to listen to connections.
@@ -9,3 +10,27 @@
  * - listen_queue_size: the amount of connections to queue up waiting to be accepted
 */
 int listen_tcp_socket(const char *ip, const char *port, bool non_blocking, bool reuse_address, bool reuse_port, int listen_queue_size);
+
+/**
+ * Async version of accept4, will try to return immediately, and await on the fd
+ * if there's nothing to be accepted
+*/
+int await_accept4(int socket_fd);
+
+/**
+ * Async version of recv, will try to return immediately, and await on the fd
+ * if there's nothing to be received
+*/
+int await_recv(int conn_fd, char *buffer, size_t bufsz);
+
+/**
+ * Async version of send, will try to return immediately, and await on the fd
+ * if there's not enough buffer to send
+*/
+int await_send(int conn_fd, const char *buffer, size_t bufsz);
+
+/**
+ * Like await_send, but it will keep looping asynchronously until
+ * all the data has been sent succesfuly
+*/
+int await_send_all(int conn_fd, const char *buffer, size_t bufsz);
