@@ -20,6 +20,9 @@ _Do we want one?_
   https://github.com/ocaml-multicore/retro-httpaf-bench/tree/master
 - HTTP benchmarking tool wrk2
   https://github.com/giltene/wrk2
+- 10x Tokio schedules, maybe
+  https://tokio.rs/blog/2019-10-scheduler
+
 
 ## Ideas
 
@@ -32,6 +35,7 @@ _Do we want one?_
 
 
 ### wrk command
-./bench/wrk2/wrk -t 24 -d10s -L -R 50000 -c 1000 http://localhost:8082
+./bench/wrk2/wrk -t 24 -d10s -L -R 100000 -c 1000 http://localhost:8082
+./bench/wrk2/wrk -t 24 -d10s -L -R 100000 -c 1000 -s ./bench/http_server_bench/utils/check.lua http://localhost:8082
 
 perf record -F 500 -a -g --call-graph dwarf -- ~/Repos/retro-httpaf-bench/build/rust_hyper.exe
