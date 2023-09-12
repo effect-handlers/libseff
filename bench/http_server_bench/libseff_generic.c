@@ -167,10 +167,20 @@ void *connection_fun(seff_coroutine_t *self, void *_arg) {
     return NULL;
 }
 
-
+typedef struct {
+    const char* ip;
+    const char* port;
+} listener_args;
 
 void *listener_fun(seff_coroutine_t *self, void *_arg) {
-    int socket_fd = (int)(uintptr_t)_arg;
+    listener_args* args = (listener_args*)_arg;
+    int socket_fd = listen_tcp_socket(args->ip, args->port, true, true, true, 1024);
+    if (socket_fd == -1) {
+        printf("Cannot listen on %s:%s\n", args->ip, args->port);
+        return -1;
+    }
+    threadsafe_printf("Open socket %d listening on %s:%s\n", socket_fd, args->ip, args->port);
+
     deb_log("Listening for connections\n");
 
     while (true) {
@@ -183,6 +193,8 @@ void *listener_fun(seff_coroutine_t *self, void *_arg) {
         deb_log("Got connection\n");
         PERFORM(fork, connection_fun, (void *)(uintptr_t)connection_fd);
     }
+
+    close_syscall_wrapper(socket_fd);
 
     return NULL;
 }
@@ -215,17 +227,15 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    int listen_socket_fd = listen_tcp_socket(ip, port, true, true, false, 1024);
-    if (listen_socket_fd == -1) {
-        printf("Cannot listen on %s:%s\n", ip, port);
-        return -1;
-    }
-    printf("Open socket %d listening on %s:%s\n", listen_socket_fd, ip, port);
-
     scheduler_t scheduler;
     scheduler_init(&scheduler, n_threads, TASK_QUEUE_SIZE);
     printf("Initialized scheduler with %d threads\n", n_threads);
-    scheduler_schedule(&scheduler, listener_fun, (void *)(uintptr_t)listen_socket_fd, 0);
+    listener_args l_args;
+    l_args.ip = ip;
+    l_args.port = port;
+    for (int i = 0; i < n_threads; ++i){
+        scheduler_schedule(&scheduler, listener_fun, (void *)&l_args, i);
+    }
 
     scheduler_start(&scheduler);
 
@@ -233,8 +243,6 @@ int main(int argc, char *argv[]) {
 
     scheduler_join(&scheduler);
     scheduler_destroy(&scheduler);
-
-    close(listen_socket_fd);
 
     return 0;
 }
