@@ -20,21 +20,22 @@
 #include <stdint.h>
 
 struct task_t;
+typedef struct task_t *queue_elt_t;
 
 typedef struct {
     _Atomic(int64_t) top;
     _Atomic(int64_t) bottom;
-    struct circular_array_t *array;
+    queue_elt_t head;
+    _Atomic(struct circular_array_t *) array;
 } tk_queue_t;
 
-typedef struct task_t *queue_elt_t;
-
-void tk_queue_init(tk_queue_t *queue, size_t size_base);
+void tk_queue_init(tk_queue_t *queue, size_t log_size);
 
 #define EMPTY ((queue_elt_t)NULL)
 #define ABORT ((queue_elt_t)(~(uintptr_t)NULL))
 
 void tk_queue_push(tk_queue_t *queue, queue_elt_t task);
+void tk_queue_priority_push(tk_queue_t *queue, queue_elt_t task);
 queue_elt_t tk_queue_pop(tk_queue_t *queue);
 queue_elt_t tk_queue_steal(tk_queue_t *queue);
 

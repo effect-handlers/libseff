@@ -9,6 +9,8 @@
 
 #include "cl_queue.h"
 
+#undef NDEBUG
+
 #define STACK_SIZE 512
 
 typedef enum { READY, WAITING } future_state_t;
@@ -70,11 +72,21 @@ typedef struct worker_thread_t {
     queue_t task_queue;
 
 #ifndef NDEBUG
+    int64_t self_task_push;
+
+    int64_t self_task_pop;
     int64_t self_task_abort;
     int64_t self_task_empty;
+
+    int64_t stolen_task_ok;
     int64_t stolen_task_abort;
     int64_t stolen_task_empty;
+
     int64_t spinlock_fails;
+
+    int64_t async_requests;
+    int64_t await_requests;
+    int64_t return_requests;
 #endif
 } worker_thread_t;
 
@@ -102,7 +114,7 @@ bool async_scheduler_init(async_scheduler_t *self, size_t n_workers) {
         self->workers[i].stolen_task_empty = 0;
         self->workers[i].spinlock_fails = 0;
 #endif
-        cl_queue_init(&self->workers[i].task_queue);
+        cl_queue_init(&self->workers[i].task_queue, 3);
     }
     return true;
 }
@@ -115,12 +127,15 @@ void async_schedule(
     task->waiting = NULL;
     task->promise = promise;
     self->remaining_tasks++;
+
+    self->workers[0].self_task_push++;
     cl_queue_push(&self->workers[0].task_queue, task);
 }
 
 task_t *try_get_task(worker_thread_t *self) {
     task_t *own_task = cl_queue_pop(&self->task_queue);
     if (own_task != EMPTY && own_task != ABORT) {
+        self->self_task_pop++;
         return own_task;
     }
 #ifndef NDEBUG
@@ -139,6 +154,7 @@ task_t *try_get_task(worker_thread_t *self) {
         task_t *stolen_task =
             cl_queue_steal(&scheduler->workers[(worker_id + i) % n_workers].task_queue);
         if (stolen_task != EMPTY && stolen_task != ABORT) {
+            self->stolen_task_ok++;
             return stolen_task;
         }
 #ifndef NDEBUG
@@ -181,6 +197,7 @@ void *worker_thread(void *_self) {
         seff_eff_t *request = (seff_eff_t *)seff_handle(
             current_task->coroutine, coroutine_arg, HANDLES(async) | HANDLES(await));
         if (current_task->coroutine->state == FINISHED) {
+            self->return_requests++;
             future_t *promise = current_task->promise;
 
             /* Spin until the future can be acquired */
@@ -190,6 +207,7 @@ void *worker_thread(void *_self) {
 
                 task_t *waiter = promise->waiter;
                 if (waiter != NULL) {
+                    self->self_task_push++;
                     cl_queue_push(&self->task_queue, waiter);
                 }
             });
@@ -200,10 +218,12 @@ void *worker_thread(void *_self) {
         } else {
             switch (request->id) {
                 CASE_EFFECT(request, await, {
+                    self->await_requests++;
                     future_t *awaited = payload.fut;
                     SPINLOCK(awaited, {
                         current_task->waiting = payload.fut;
                         if (payload.fut->state == READY) {
+                            self->self_task_push++;
                             cl_queue_push(&self->task_queue, current_task);
                         } else {
                             payload.fut->waiter = current_task;
@@ -212,6 +232,7 @@ void *worker_thread(void *_self) {
                     break;
                 });
                 CASE_EFFECT(request, async, {
+                    self->async_requests++;
                     atomic_fetch_add_explicit(remaining_tasks, 1, memory_order_relaxed);
 
                     payload.promise->state = WAITING;
@@ -225,6 +246,7 @@ void *worker_thread(void *_self) {
                     new_task->promise = payload.promise;
                     new_task->waiting = NULL;
 
+                    self->self_task_push += 2;
                     cl_queue_push(&self->task_queue, new_task);
                     cl_queue_push(&self->task_queue, current_task);
                     break;
@@ -331,11 +353,20 @@ int main(int argc, char **argv) {
         total_contention += scheduler.workers[i].stolen_task_abort;
         total_contention += scheduler.workers[i].stolen_task_empty;
         total_contention += scheduler.workers[i].spinlock_fails;
+        printf("\tself_task_push: %ld\n\n", scheduler.workers[i].self_task_push);
+
+        printf("\tself_task_pop: %ld\n", scheduler.workers[i].self_task_pop);
         printf("\tself_task_abort: %ld\n", scheduler.workers[i].self_task_abort);
-        printf("\tself_task_empty: %ld\n", scheduler.workers[i].self_task_empty);
+        printf("\tself_task_empty: %ld\n\n", scheduler.workers[i].self_task_empty);
+
+        printf("\tstolen_task_ok: %ld\n", scheduler.workers[i].stolen_task_ok);
         printf("\tstolen_task_abort: %ld\n", scheduler.workers[i].stolen_task_abort);
         printf("\tstolen_task_empty: %ld\n", scheduler.workers[i].stolen_task_empty);
-        printf("\tspinlock_fails: %ld\n", scheduler.workers[i].spinlock_fails);
+        printf("\tspinlock_fails: %ld\n\n", scheduler.workers[i].spinlock_fails);
+
+        printf("\tasync_requests: %ld\n", scheduler.workers[i].async_requests);
+        printf("\tawait_requests: %ld\n", scheduler.workers[i].await_requests);
+        printf("\treturn_requests: %ld\n", scheduler.workers[i].return_requests);
     }
 
     printf("Relative contention %lf\n", ((double)total_contention) / n_workers);

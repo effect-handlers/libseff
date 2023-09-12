@@ -20,6 +20,7 @@
 #include <stdint.h>
 
 struct task_t;
+typedef struct task_t *queue_elt_t;
 
 typedef struct queue_t {
     _Atomic(int64_t) top;
@@ -27,9 +28,7 @@ typedef struct queue_t {
     _Atomic(struct circular_array_t *) array;
 } queue_t;
 
-typedef struct task_t *queue_elt_t;
-
-void cl_queue_init(queue_t *queue);
+void cl_queue_init(queue_t *queue, size_t log_size);
 
 #define EMPTY ((queue_elt_t)NULL)
 #define ABORT ((queue_elt_t)(~(uintptr_t)NULL))

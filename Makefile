@@ -107,6 +107,9 @@ bench: output/lib/libseff.a output/lib/libutils.a
 		$(MAKE) BUILD=${BUILD} -C $${bench_dir} all ; \
 	done
 
+bench/%: output/lib/libseff.a output/lib/libutils.a
+	$(MAKE) BUILD=${BUILD} -C $@ all
+
 compile_commands.json:
 	$(MAKE) --always-make --dry-run \
 	 | grep -wE 'gcc|g\+\+|clang' \

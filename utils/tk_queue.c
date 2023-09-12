@@ -14,6 +14,7 @@
  */
 
 #include "tk_queue.h"
+#include "circular_array.h"
 
 #include <assert.h>
 #include <stdatomic.h>
@@ -26,22 +27,11 @@
 #define ACQUIRE(op, ...) atomic_##op##_explicit(__VA_ARGS__, memory_order_acquire)
 #define RELEASE(op, ...) atomic_##op##_explicit(__VA_ARGS__, memory_order_release)
 
-typedef struct circular_array_t {
-    size_t size;
-    size_t mask;
-    queue_elt_t buffer[];
-} circular_array_t;
-
-void tk_queue_init(tk_queue_t *self, size_t size_base) {
-    assert(size_base < 32);
-
+void tk_queue_init(tk_queue_t *self, size_t log_size) {
     self->bottom = 0;
     self->top = 0;
-
-    size_t size = 1 << size_base;
-    self->array = malloc(sizeof(circular_array_t) + size * sizeof(_Atomic(queue_elt_t)));
-    self->array->size = size;
-    self->array->mask = size - 1;
+    self->head = EMPTY;
+    self->array = circular_array_new(log_size);
 }
 
 void tk_queue_push(tk_queue_t *self, queue_elt_t elt) {
@@ -59,7 +49,20 @@ void tk_queue_push(tk_queue_t *self, queue_elt_t elt) {
     }
 }
 
+void tk_queue_priority_push(tk_queue_t *self, queue_elt_t elt) {
+    queue_elt_t old_head = self->head;
+    self->head = elt;
+    if (old_head) {
+        tk_queue_push(self, old_head);
+    }
+}
+
 queue_elt_t tk_queue_pop(tk_queue_t *self) {
+    if (self->head != EMPTY) {
+        queue_elt_t head = self->head;
+        self->head = EMPTY;
+        return head;
+    }
     circular_array_t *arr = self->array;
     while (true) {
         int64_t top = ACQUIRE(load, &self->top);
