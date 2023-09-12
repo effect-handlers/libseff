@@ -45,8 +45,7 @@ void tk_queue_push(tk_queue_t *self, queue_elt_t elt) {
         arr = new_array;
     }
 
-    arr->buffer[bottom & arr->mask] = elt;
-    // CA_SET(arr, bottom, elt);
+    CA_SET(arr, bottom, elt);
     RELEASE(store, &self->bottom, bottom + 1);
     return;
 }
@@ -74,7 +73,7 @@ queue_elt_t tk_queue_pop(tk_queue_t *self) {
             return EMPTY;
         }
 
-        queue_elt_t elt = arr->buffer[top & arr->mask];
+        queue_elt_t elt = CA_GET(arr, top);
 
         if (atomic_compare_exchange_strong_explicit(
                 &self->top, &top, top + 1, memory_order_release, memory_order_relaxed)) {
@@ -93,7 +92,7 @@ queue_elt_t tk_queue_steal(tk_queue_t *self) {
             return EMPTY;
         }
 
-        queue_elt_t elt = arr->buffer[top & arr->mask];
+        queue_elt_t elt = CA_GET(arr, top);
 
         if (atomic_compare_exchange_strong_explicit(
                 &self->top, &top, top + 1, memory_order_release, memory_order_relaxed)) {

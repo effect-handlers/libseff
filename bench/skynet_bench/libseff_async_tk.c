@@ -140,8 +140,10 @@ task_t *try_get_task(worker_thread_t *self) {
         return own_task;
     }
 #ifndef NDEBUG
-    else {
+    else if (own_task == EMPTY) {
         self->self_task_empty++;
+    } else {
+        self->self_task_abort++;
     }
 #endif
 
@@ -157,8 +159,10 @@ task_t *try_get_task(worker_thread_t *self) {
             return stolen_task;
         }
 #ifndef NDEBUG
-        else {
+        else if (stolen_task == EMPTY) {
             self->stolen_task_empty++;
+        } else {
+            self->stolen_task_abort++;
         }
 #endif
     }

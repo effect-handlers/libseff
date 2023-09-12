@@ -39,7 +39,7 @@ queue_elt_t cl_queue_pop(queue_t *self) {
     queue_elt_t elt;
     if (top <= bottom) {
         /* Non-empty queue */
-        elt = RELAXED(load, &arr->buffer[bottom & arr->mask]);
+        elt = CA_GET(arr, bottom);
         if (top == bottom) {
             /* We just raced for the last element */
             if (!RELAXED(
@@ -68,8 +68,7 @@ void cl_queue_push(queue_t *self, queue_elt_t elt) {
         /* TODO: we're leaking memory here */
         arr = new_array;
     }
-    RELAXED(store, &arr->buffer[bottom & arr->mask], elt);
-    // arr->buffer[bottom & arr->mask] = elt;
+    CA_SET(arr, bottom, elt);
     atomic_thread_fence(memory_order_release);
     RELAXED(store, &self->bottom, bottom + 1);
 }
@@ -82,7 +81,7 @@ queue_elt_t cl_queue_steal(queue_t *self) {
     if (top < bottom) {
         /* Non-empty queue */
         circular_array_t *arr = atomic_load_explicit(&self->array, memory_order_consume);
-        elt = RELAXED(load, &arr->buffer[top & arr->mask]);
+        elt = CA_GET(arr, top);
         if (!RELAXED(compare_exchange_strong, &self->top, &top, top + 1, memory_order_seq_cst)) {
             /* Failed the race */
             return ABORT;
