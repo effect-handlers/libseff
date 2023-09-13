@@ -181,8 +181,8 @@ void *worker_thread(void *args) {
         // If none of the threads had any available tasks, this might mean all
         // the tasks were completed by another thread after we checked for
         // `remaining_tasks.load() > 0`, so loop again
-        if (!task.cont){
-            if (atomic_load_explicit(&scheduler->remaining_tasks, memory_order_relaxed) == 0){
+        if (!task.cont) {
+            if (atomic_load_explicit(&scheduler->remaining_tasks, memory_order_relaxed) == 0) {
                 break;
             }
             continue;

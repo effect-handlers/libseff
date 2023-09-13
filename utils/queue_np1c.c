@@ -42,7 +42,7 @@ bool queue_init(queue_t *queue, size_t capacity) {
     queue->tasks = calloc(capacity, sizeof(queue_node_t));
     if (!queue->tasks)
         return false;
-    for (int i = 0; i < capacity; i++){
+    for (int i = 0; i < capacity; i++) {
 #ifndef NDEBUG
         memset(&queue->tasks[i].task, 0, sizeof(task_t));
 #endif
@@ -55,7 +55,9 @@ bool queue_init(queue_t *queue, size_t capacity) {
     atomic_store(&queue->size, 0);
     return true;
 }
-size_t queue_size(queue_t *queue) { return atomic_load_explicit(&queue->size, memory_order_relaxed); }
+size_t queue_size(queue_t *queue) {
+    return atomic_load_explicit(&queue->size, memory_order_relaxed);
+}
 bool queue_empty(queue_t *queue) { return queue_size(queue) == 0; }
 
 _Atomic int n_enqueue;
@@ -83,7 +85,8 @@ bool queue_enqueue(queue_t *queue, task_t task) {
     assert(memcmp(&task, &zeroed_task, sizeof(task_t)) != 0);
 #endif
     queue->tasks[write_loc].task = task;
-    bool flag = atomic_fetch_or_explicit(&queue->tasks[write_loc].valid, true, memory_order_seq_cst);
+    bool flag =
+        atomic_fetch_or_explicit(&queue->tasks[write_loc].valid, true, memory_order_seq_cst);
     (void)flag;
 #ifndef NDEBUG
     assert(!flag);

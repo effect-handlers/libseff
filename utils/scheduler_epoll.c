@@ -189,7 +189,7 @@ void *worker_thread(void *args) {
     struct epoll_event events[MAX_EVENTS];
     while (atomic_load_explicit(&scheduler->remaining_tasks, memory_order_relaxed) > 0) {
         task_t task = queue_dequeue(task_queue);
-        if (task){
+        if (task) {
             // There's a valid task
             run_task(self, task);
             task->ready_events = 0;
@@ -206,7 +206,7 @@ void *worker_thread(void *args) {
             for (size_t i = 0; i < n_events; i++) {
                 task_t watcher = (task_t)events[i].data.ptr;
                 watcher->ready_events |= events[i].events;
-                if (can_run(watcher)){
+                if (can_run(watcher)) {
                     epoll_ctl(self->epoll_fd, EPOLL_CTL_DEL, watcher->watched_fd, NULL);
                     watcher->watched_fd = -1;
                     while (!queue_enqueue(task_queue, watcher)) {
@@ -214,11 +214,11 @@ void *worker_thread(void *args) {
                     }
                 }
             }
-
         }
     }
 
-    threadsafe_printf("exiting with %ld remaining tasks\n", atomic_load_explicit(&scheduler->remaining_tasks, memory_order_relaxed));
+    threadsafe_printf("exiting with %ld remaining tasks\n",
+        atomic_load_explicit(&scheduler->remaining_tasks, memory_order_relaxed));
 
     return NULL;
 }

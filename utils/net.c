@@ -1,20 +1,19 @@
-#include <net.h>
-#include <netdb.h>
-#include <strings.h>
-#include <string.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/types.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <net.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <strings.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "scheduler.h"
 
 #ifndef NDEBUG
-#define deb_log(msg, ...) \
-    printf(msg, ##__VA_ARGS__)
+#define deb_log(msg, ...) printf(msg, ##__VA_ARGS__)
 #else
 #define deb_log(msg, ...)
 #endif
@@ -26,15 +25,17 @@ __attribute__((no_split_stack)) int get_errno() {
 }
 
 MAKE_SYSCALL_WRAPPER(int, get_errno);
-MAKE_SYSCALL_WRAPPER(int, accept4, int, void*, void*, int);
-MAKE_SYSCALL_WRAPPER(int, recv, int, void*, size_t, int);
-MAKE_SYSCALL_WRAPPER(int, send, int, const void*, size_t, int);
+MAKE_SYSCALL_WRAPPER(int, accept4, int, void *, void *, int);
+MAKE_SYSCALL_WRAPPER(int, recv, int, void *, size_t, int);
+MAKE_SYSCALL_WRAPPER(int, send, int, const void *, size_t, int);
 
-int listen_tcp_socket(const char *ip, const char *port, bool non_blocking, bool reuse_address, bool reuse_port, int listen_queue_size){
+int listen_tcp_socket(const char *ip, const char *port, bool non_blocking, bool reuse_address,
+    bool reuse_port, int listen_queue_size) {
     deb_log("Getting listening TCP socket on ip: %s, port: %s\n", ip, port);
-    deb_log("  non blocking: %d, reuse address: %d, reuse port: %d\n", non_blocking, reuse_address, reuse_port);
+    deb_log("  non blocking: %d, reuse address: %d, reuse port: %d\n", non_blocking, reuse_address,
+        reuse_port);
 
-    int listener = -1;     // Listening socket descriptor
+    int listener = -1; // Listening socket descriptor
     int ret_val;
 
     // getAddrInfo, this is compatible with IPv6 and should resolve DNS lookups
@@ -51,25 +52,26 @@ int listen_tcp_socket(const char *ip, const char *port, bool non_blocking, bool 
     }
 
     // Try to bind to all of them
-    for(p = ai; p != NULL; p = p->ai_next) {
-        listener = socket(p->ai_family, p->ai_socktype | (non_blocking ? SOCK_NONBLOCK : 0), p->ai_protocol);
+    for (p = ai; p != NULL; p = p->ai_next) {
+        listener = socket(
+            p->ai_family, p->ai_socktype | (non_blocking ? SOCK_NONBLOCK : 0), p->ai_protocol);
         if (listener < 0) {
-            deb_log("Failure to create socket with family: %d, type: %d, protocol: %d\n", p->ai_family, p->ai_socktype | (non_blocking ? SOCK_NONBLOCK : 0), p->ai_protocol);
+            deb_log("Failure to create socket with family: %d, type: %d, protocol: %d\n",
+                p->ai_family, p->ai_socktype | (non_blocking ? SOCK_NONBLOCK : 0), p->ai_protocol);
             continue;
         }
 
-        if (reuse_address){
+        if (reuse_address) {
             deb_log("Reusing address\n");
             int yes = 1;
             setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
         }
 
-        if (reuse_port){
+        if (reuse_port) {
             deb_log("Reusing port\n");
             int yes = 1;
-            setsockopt(listener, SOL_SOCKET, SO_REUSEPORT , &yes, sizeof(yes));
+            setsockopt(listener, SOL_SOCKET, SO_REUSEPORT, &yes, sizeof(yes));
         }
-
 
         if (bind(listener, p->ai_addr, p->ai_addrlen) < 0) {
             deb_log("Failure to bind socket\n");
@@ -82,7 +84,7 @@ int listen_tcp_socket(const char *ip, const char *port, bool non_blocking, bool 
 
     // Cleanup
     freeaddrinfo(ai);
-    if (p == NULL){
+    if (p == NULL) {
         deb_log("None of the addrinfo succeded, exiting\n");
         return -1;
     }
@@ -96,7 +98,6 @@ int listen_tcp_socket(const char *ip, const char *port, bool non_blocking, bool 
 
     return listener;
 }
-
 
 int await_accept4(int socket_fd) {
     // it is assumed that the socket is non blocking
@@ -127,7 +128,6 @@ int await_accept4(int socket_fd) {
     return accept4_syscall_wrapper(socket_fd, NULL, NULL, SOCK_NONBLOCK);
 }
 
-
 int await_recv(int conn_fd, char *buffer, size_t bufsz) {
     int n_read = recv_syscall_wrapper(conn_fd, buffer, bufsz, MSG_DONTWAIT);
     if (n_read >= 0) {
@@ -142,7 +142,6 @@ int await_recv(int conn_fd, char *buffer, size_t bufsz) {
             deb_log("Call to recv failed! returning error\n");
             return n_read;
         }
-
     }
     event_t revents = PERFORM(await, conn_fd, READ | ET);
     if (HANGUP & revents)
@@ -166,7 +165,6 @@ int await_send(int conn_fd, const char *buffer, size_t bufsz) {
             deb_log("Call to send failed! returning error\n");
             return n_read;
         }
-
     }
     event_t revents = PERFORM(await, conn_fd, WRITE);
     if (HANGUP & revents)
@@ -178,17 +176,19 @@ int await_send(int conn_fd, const char *buffer, size_t bufsz) {
     return send_syscall_wrapper(conn_fd, buffer, bufsz, MSG_DONTWAIT);
 }
 
-int await_send_all(int conn_fd, const char *buffer, size_t bufsz){
-    int total = 0; // how many bytes we've sent
+int await_send_all(int conn_fd, const char *buffer, size_t bufsz) {
+    int total = 0;         // how many bytes we've sent
     int bytesleft = bufsz; // how many we have left to send
     int n;
 
-    while(total < bufsz) {
-        n = await_send(conn_fd, buffer+total, bytesleft);
-        if (n == -1) { break; }
+    while (total < bufsz) {
+        n = await_send(conn_fd, buffer + total, bytesleft);
+        if (n == -1) {
+            break;
+        }
         total += n;
         bytesleft -= n;
     }
 
-    return n==-1?-1:total; // return -1 on failure, 0 on success
+    return n == -1 ? -1 : total; // return -1 on failure, 0 on success
 }
