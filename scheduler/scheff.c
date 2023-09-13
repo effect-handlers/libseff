@@ -133,13 +133,9 @@ bool scheff_init(scheff_t *self, size_t n_workers) {
         self->workers[i].scheduler = self;
         self->workers[i].thread = 0;
         self->workers[i].worker_id = i;
-        debug({
-            self->workers[i].self_task_abort = 0;
-            self->workers[i].self_task_empty = 0;
-            self->workers[i].stolen_task_abort = 0;
-            self->workers[i].stolen_task_empty = 0;
-            self->workers[i].spinlock_fails = 0;
-        });
+#define X(counter) self->workers[i].counter = 0;
+        debug(SCHEFF_DEBUG_COUNTERS);
+#undef X
         QUEUE(init)(&self->workers[i].task_queue, INITIAL_QUEUE_LOG_SIZE);
     }
     return true;
@@ -149,6 +145,7 @@ void scheff_schedule(scheff_t *self, seff_start_fun_t fn, void *arg) {
     task_t *task = (task_t *)malloc(sizeof(task_t));
     seff_coroutine_init_sized(&task->coroutine, fn, arg, STACK_SIZE);
     task->wakeup_fn = NULL;
+    task->wakeup_arg = NULL;
     self->remaining_tasks++;
 
     debug(self->workers[0].self_task_push++);
@@ -185,6 +182,16 @@ task_t *scheff_try_get_task(worker_thread_t *self) {
     return NULL;
 }
 
+#define ENQUEUE(elt)                      \
+    {                                     \
+        debug(self->self_task_push += 1); \
+        QUEUE(push)(task_queue, elt);     \
+    }
+#define ENQUEUE_PRIORITY(elt)                  \
+    {                                          \
+        debug(self->self_task_push += 1);      \
+        QUEUE(priority_push)(task_queue, elt); \
+    }
 void *scheff_worker_thread(void *_self) {
     worker_thread_t *self = (worker_thread_t *)(_self);
     QUEUE(t) *task_queue = &self->task_queue;
@@ -210,14 +217,13 @@ void *scheff_worker_thread(void *_self) {
         if (current_task->wakeup_fn) {
             wakeup_t w = current_task->wakeup_fn(current_task->wakeup_arg);
             if (!w.wake) {
-                debug(self->self_task_push += 1);
-                QUEUE(push)(task_queue, current_task);
+                debug(self->self_task_asleep += 1);
+                ENQUEUE(current_task);
                 continue;
             } else {
                 task_arg = w.result;
             }
         }
-        printf("Running %p\n", (void *)current_task);
         seff_eff_t *request = (seff_eff_t *)seff_handle(&current_task->coroutine, task_arg,
             HANDLES(fork) | HANDLES(sleep) | HANDLES(notify) | HANDLES(suspend));
         if (current_task->coroutine.state == FINISHED) {
@@ -243,8 +249,7 @@ void *scheff_worker_thread(void *_self) {
                             exit(-1);
                         }
                         if (payload.fut->state == READY) {
-                            debug(self->self_task_push += 1);
-                            QUEUE(push)(task_queue, current_task);
+                            ENQUEUE(current_task);
                         } else {
                             payload.fut->waiter = current_task;
                         }
@@ -252,13 +257,22 @@ void *scheff_worker_thread(void *_self) {
                     break;
                 });
                 CASE_EFFECT(request, suspend, {
+                    debug(self->suspend_requests++);
+
+                    static bool suppress_warning = false;
+                    if ((void *)QUEUE(push) == (void *)cl_queue_push && !suppress_warning) {
+                        printf("WARNING! Using the suspend effect on Chase-Lev queues can lead to "
+                               "livelocks\n");
+                        suppress_warning = true;
+                    }
                     current_task->wakeup_fn = payload.wk;
                     current_task->wakeup_arg = payload.arg;
-                    debug(self->self_task_push++);
-                    QUEUE(push)(task_queue, current_task);
+                    ENQUEUE(current_task);
+                    break;
                 });
                 CASE_EFFECT(request, fork, {
                     debug(self->fork_requests++);
+
                     RELAXED(fetch_add, remaining_tasks, 1);
 
                     // TODO: duplicated with scheff_schedule
@@ -266,12 +280,15 @@ void *scheff_worker_thread(void *_self) {
                     seff_coroutine_init_sized(
                         &new_task->coroutine, payload.fn, payload.arg, STACK_SIZE);
                     new_task->wakeup_fn = NULL;
-                    debug(self->self_task_push += 2);
-                    QUEUE(priority_push)(task_queue, new_task);
-                    QUEUE(push)(task_queue, current_task);
+                    new_task->wakeup_arg = NULL;
+
+                    ENQUEUE(current_task);
+                    ENQUEUE_PRIORITY(new_task);
                     break;
                 });
                 CASE_EFFECT(request, notify, {
+                    debug(self->notify_requests++);
+
                     for (size_t i = 0; i < payload.n_futs; i++) {
                         SPINLOCK(&payload.futs[0], {
                             task_t *waiter = payload.futs[0].waiter;
@@ -283,8 +300,7 @@ void *scheff_worker_thread(void *_self) {
                         });
                     }
                     if (payload.resume) {
-                        debug(self->self_task_push += 1);
-                        QUEUE(push)(task_queue, current_task);
+                        ENQUEUE(current_task);
                     } else {
                         seff_coroutine_release(&current_task->coroutine);
                         free(current_task);
@@ -300,6 +316,8 @@ void *scheff_worker_thread(void *_self) {
 
     return NULL;
 }
+#undef ENQUEUE_PRIORITY
+#undef ENQUEUE
 
 void scheff_run(scheff_t *scheduler) {
     for (size_t i = 1; i < scheduler->n_workers; i++) {
@@ -325,21 +343,10 @@ void scheff_print_stats(scheff_t *scheduler) {
         total_contention += scheduler->workers[i].stolen_task_abort;
         total_contention += scheduler->workers[i].stolen_task_empty;
         total_contention += scheduler->workers[i].spinlock_fails;
-        printf("\tself_task_push: %ld\n\n", scheduler->workers[i].self_task_push);
 
-        printf("\tself_task_pop: %ld\n", scheduler->workers[i].self_task_pop);
-        printf("\tself_task_abort: %ld\n", scheduler->workers[i].self_task_abort);
-        printf("\tself_task_empty: %ld\n\n", scheduler->workers[i].self_task_empty);
-
-        printf("\tstolen_task_ok: %ld\n", scheduler->workers[i].stolen_task_ok);
-        printf("\tstolen_task_abort: %ld\n", scheduler->workers[i].stolen_task_abort);
-        printf("\tstolen_task_empty: %ld\n", scheduler->workers[i].stolen_task_empty);
-        printf("\tspinlock_fails: %ld\n\n", scheduler->workers[i].spinlock_fails);
-
-        printf("\tfork_requests: %ld\n", scheduler->workers[i].fork_requests);
-        printf("\tawait_requests: %ld\n", scheduler->workers[i].await_requests);
-        printf("\tnotify_requests: %ld\n", scheduler->workers[i].notify_requests);
-        printf("\treturn_requests: %ld\n", scheduler->workers[i].return_requests);
+#define X(counter) printf("\t" #counter ": %ld\n", scheduler->workers[i].counter);
+        SCHEFF_DEBUG_COUNTERS
+#undef X
     }
 
     printf("Relative contention %lf\n", ((double)total_contention) / scheduler->n_workers);

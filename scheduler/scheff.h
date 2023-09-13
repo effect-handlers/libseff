@@ -16,6 +16,7 @@
 #include <assert.h>
 #include <pthread.h>
 #include <stdatomic.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -24,7 +25,7 @@
 #include "seff.h"
 #include "tk_queue.h"
 
-#define QUEUE(t) cl_queue_##t
+#define QUEUE(t) tk_queue_##t
 
 #undef NDEBUG
 
@@ -47,7 +48,7 @@ typedef struct future_t {
     task_list_t *waiters;
 } future_t;
 
-inline future_t new_future() { return (future_t){false, WAITING, NULL, NULL, NULL}; }
+inline future_t new_future(void) { return (future_t){false, WAITING, NULL, NULL, NULL}; }
 
 typedef struct {
     bool wake;
@@ -61,6 +62,15 @@ typedef struct task_t {
     void *wakeup_arg;
 } task_t;
 
+#define SCHEFF_DEBUG_COUNTERS                                                                      \
+    X(self_task_push)                                                                              \
+    X(self_task_pop)                                                                               \
+    X(self_task_abort)                                                                             \
+    X(self_task_empty)                                                                             \
+    X(self_task_asleep)                                                                            \
+    X(stolen_task_ok) X(stolen_task_abort) X(stolen_task_empty) X(spinlock_fails) X(fork_requests) \
+        X(await_requests) X(notify_requests) X(suspend_requests) X(return_requests)
+
 typedef struct worker_thread_t {
     struct scheff_t *scheduler;
     pthread_t thread;
@@ -68,22 +78,9 @@ typedef struct worker_thread_t {
     QUEUE(t) task_queue;
 
 #ifndef NDEBUG
-    int64_t self_task_push;
-
-    int64_t self_task_pop;
-    int64_t self_task_abort;
-    int64_t self_task_empty;
-
-    int64_t stolen_task_ok;
-    int64_t stolen_task_abort;
-    int64_t stolen_task_empty;
-
-    int64_t spinlock_fails;
-
-    int64_t fork_requests;
-    int64_t await_requests;
-    int64_t notify_requests;
-    int64_t return_requests;
+#define X(counter) int64_t counter;
+    SCHEFF_DEBUG_COUNTERS
+#undef X
 #endif
 } worker_thread_t;
 

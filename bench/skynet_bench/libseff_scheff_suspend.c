@@ -17,14 +17,10 @@ typedef struct {
 
 wakeup_t lwp_ready(void *_promise) {
     lwp_t *promise = (lwp_t *)_promise;
-    if (!promise->ready) {
-        printf("promise %p is not ready\n", (void *)promise);
-    }
     return (wakeup_t){atomic_load_explicit(&promise->ready, memory_order_relaxed), promise->value};
 }
 
 void lwp_fulfill(lwp_t *promise, void *value) {
-    printf("fulfilling promise %p\n", (void *)promise);
     promise->value = value;
     atomic_store_explicit(&promise->ready, true, memory_order_release);
 }
@@ -37,9 +33,8 @@ typedef struct {
 int64_t last_layer = 1;
 int64_t total = 0;
 void *skynet(seff_coroutine_t *self, void *_arg) {
-    skynet_args_t args = *(skynet_args_t *)_arg;
-    int64_t num = args.num;
-    lwp_t *result_promise = &args.result_promise;
+    int64_t num = ((skynet_args_t *)_arg)->num;
+    lwp_t *result_promise = &((skynet_args_t *)_arg)->result_promise;
 
     if (num >= last_layer) {
         lwp_fulfill(result_promise, (void *)(num - last_layer));
@@ -106,7 +101,6 @@ int main(int argc, char **argv) {
 
     skynet_args_t root_args;
     root_args.result_promise.ready = false;
-    root_args.result_promise.value = 1337;
     root_args.num = 1;
     scheff_schedule(&scheduler, skynet, &root_args);
 
