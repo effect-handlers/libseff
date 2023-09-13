@@ -227,9 +227,8 @@ void *scheff_worker_thread(void *_self) {
         seff_eff_t *request = (seff_eff_t *)seff_handle(&current_task->coroutine, task_arg,
             HANDLES(fork) | HANDLES(sleep) | HANDLES(notify) | HANDLES(suspend));
         if (current_task->coroutine.state == FINISHED) {
-            debug(self->return_requests++);
-
             debug({
+                self->return_requests++;
                 int64_t n_tasks = RELAXED(load, remaining_tasks);
                 int64_t max_tasks = RELAXED(load, &self->scheduler->max_tasks);
                 if (n_tasks > max_tasks) {
