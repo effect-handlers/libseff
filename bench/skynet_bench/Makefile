@@ -1,4 +1,4 @@
-all: output/libseff output/libseff_async output/libseff_async_tk output/libseff_scheff
+all: output/libseff output/libseff_async output/libseff_async_tk output/libseff_scheff output/libseff_scheff_await
 
 include ../common.mk
 
@@ -13,3 +13,6 @@ output/libseff_async_tk: libseff_async_tk.c $(LIBSEFF_LIB) | output
 
 output/libseff_scheff: libseff_scheff.c $(LIBSEFF_LIB) | output
 	$(CC) $(CFLAGS_LIBSEFF) libseff_scheff.c -o $@ $(LDFLAGS_LIBSEFF)
+
+output/libseff_scheff_await: libseff_scheff_await.c $(LIBSEFF_LIB) | output
+	$(CC) $(CFLAGS_LIBSEFF) libseff_scheff_await.c -o $@ $(LDFLAGS_LIBSEFF)

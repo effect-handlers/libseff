@@ -14,6 +14,8 @@
 #define STACK_SIZE 512
 #define INITIAL_QUEUE_LOG_SIZE 3
 
+#define RELAXED(op, ...) atomic_##op##_explicit(__VA_ARGS__, memory_order_relaxed)
+
 typedef enum { READY, WAITING } future_state_t;
 
 struct task_t;
@@ -95,12 +97,16 @@ typedef struct async_scheduler_t {
     size_t n_workers;
     worker_thread_t *workers;
     _Atomic int64_t remaining_tasks;
+    _Atomic int64_t max_tasks;
 } async_scheduler_t;
 
 bool async_scheduler_init(async_scheduler_t *self, size_t n_workers) {
     assert(n_workers > 0);
     self->n_workers = n_workers;
     self->remaining_tasks = 0;
+#ifndef NDEBUG
+    self->max_tasks = 0;
+#endif
     self->workers = malloc(n_workers * sizeof(worker_thread_t));
     if (!self->workers)
         return false;
@@ -213,6 +219,13 @@ void *worker_thread(void *_self) {
                 }
             });
 
+#ifndef NDEBUG
+            int64_t n_tasks = RELAXED(load, remaining_tasks);
+            int64_t max_tasks = RELAXED(load, &self->scheduler->max_tasks);
+            if (n_tasks > max_tasks) {
+                RELAXED(store, &self->scheduler->max_tasks, n_tasks);
+            }
+#endif
             seff_coroutine_delete(current_task->coroutine);
             free(current_task);
             atomic_fetch_sub_explicit(remaining_tasks, 1, memory_order_relaxed);
@@ -371,6 +384,7 @@ int main(int argc, char **argv) {
     }
 
     printf("Relative contention %lf\n", ((double)total_contention) / n_workers);
+    printf("Max concurrent tasks %ld\n", scheduler.max_tasks);
 #endif
     return 0;
 }

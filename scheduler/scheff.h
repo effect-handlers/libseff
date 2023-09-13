@@ -49,8 +49,16 @@ typedef struct future_t {
 
 inline future_t new_future() { return (future_t){false, WAITING, NULL, NULL, NULL}; }
 
+typedef struct {
+    bool wake;
+    void *result;
+} wakeup_t;
+typedef wakeup_t(scheff_wakeup_fn_t)(void *);
+
 typedef struct task_t {
     seff_coroutine_t coroutine;
+    scheff_wakeup_fn_t *wakeup_fn;
+    void *wakeup_arg;
 } task_t;
 
 typedef struct worker_thread_t {
@@ -82,6 +90,9 @@ typedef struct worker_thread_t {
 typedef struct scheff_t {
     size_t n_workers;
     _Atomic(int64_t) remaining_tasks;
+#ifndef NDEBUG
+    _Atomic(int64_t) max_tasks;
+#endif
     worker_thread_t *workers;
 } scheff_t;
 
@@ -92,4 +103,8 @@ void scheff_print_stats(scheff_t *scheduler);
 
 void scheff_fork(seff_start_fun_t *fn, void *arg);
 void *scheff_await(future_t *fut);
-bool scheff_fulfill(future_t *fut, void *result);
+bool scheff_fulfill(future_t *fut, void *result, bool resume);
+
+void *scheff_suspend(scheff_wakeup_fn_t *wk, void *wk_arg);
+
+void scheff_async(seff_start_fun_t *fn, void *arg, future_t *fut);

@@ -1,4 +1,4 @@
-/*
+/*wait
  *
  * Copyright (c) 2023 Huawei Technologies Co., Ltd.
  *
@@ -23,8 +23,16 @@ DEFINE_EFFECT(fork, 0, void, {
     seff_start_fun_t *fn;
     void *arg;
 });
-DEFINE_EFFECT(await, 1, bool, { future_t *fut; });
-DEFINE_EFFECT(notify, 2, void, { future_t *fut; });
+DEFINE_EFFECT(sleep, 1, bool, { future_t *fut; });
+DEFINE_EFFECT(notify, 2, void, {
+    size_t n_futs;
+    future_t *futs;
+    bool resume;
+});
+DEFINE_EFFECT(suspend, 3, void *, {
+    scheff_wakeup_fn_t *wk;
+    void *arg;
+});
 
 bool try_lock(future_t *fut) {
     bool expected = false;
@@ -54,7 +62,7 @@ void *scheff_await(future_t *fut) {
     case READY:
         return fut->result;
     case WAITING:
-        PERFORM(await, fut);
+        PERFORM(sleep, fut);
         return fut->result;
     case CANCELLED:
         return NULL;
@@ -63,18 +71,45 @@ void *scheff_await(future_t *fut) {
         return NULL;
     }
 }
-bool scheff_fulfill(future_t *fut, void *result) {
+bool scheff_fulfill(future_t *fut, void *result, bool resume) {
     future_state_t expected = WAITING;
 
     if (atomic_compare_exchange_strong_explicit(
             &fut->state, &expected, WRITING, memory_order_acquire, memory_order_relaxed)) {
         fut->result = result;
         RELEASE(store, &fut->state, READY);
-        PERFORM(notify, fut);
+        PERFORM(notify, 1, fut, resume);
         return true;
     } else {
         return false;
     }
+}
+
+void *scheff_suspend(scheff_wakeup_fn_t *wk, void *arg) { return PERFORM(suspend, wk, arg); }
+
+typedef struct {
+    future_t *fut;
+    seff_start_fun_t *fn;
+    void *arg;
+} scheff_async_args_t;
+
+MAKE_SYSCALL_WRAPPER(void, free, void *);
+MAKE_SYSCALL_WRAPPER(void *, malloc, size_t);
+void *scheff_async_wrapper(seff_coroutine_t *self, void *_args) {
+    scheff_async_args_t args = *(scheff_async_args_t *)_args;
+    free_syscall_wrapper(_args);
+    void *result = args.fn(self, args.arg);
+    scheff_fulfill(args.fut, result, false);
+    return NULL;
+}
+
+void scheff_async(seff_start_fun_t *fn, void *arg, future_t *fut) {
+    scheff_async_args_t *args = malloc_syscall_wrapper(sizeof(scheff_async_args_t));
+    *fut = new_future();
+    args->fut = fut;
+    args->fn = fn;
+    args->arg = arg;
+    scheff_fork(scheff_async_wrapper, args);
 }
 
 #define STACK_SIZE 512
@@ -90,6 +125,7 @@ bool scheff_init(scheff_t *self, size_t n_workers) {
     assert(n_workers > 0);
     self->n_workers = n_workers;
     self->remaining_tasks = 0;
+    debug(self->max_tasks = 0);
     self->workers = malloc(n_workers * sizeof(worker_thread_t));
     if (!self->workers)
         return false;
@@ -112,13 +148,14 @@ bool scheff_init(scheff_t *self, size_t n_workers) {
 void scheff_schedule(scheff_t *self, seff_start_fun_t fn, void *arg) {
     task_t *task = (task_t *)malloc(sizeof(task_t));
     seff_coroutine_init_sized(&task->coroutine, fn, arg, STACK_SIZE);
+    task->wakeup_fn = NULL;
     self->remaining_tasks++;
 
     debug(self->workers[0].self_task_push++);
     QUEUE(push)(&self->workers[0].task_queue, task);
 }
 
-task_t *try_get_task(worker_thread_t *self) {
+task_t *scheff_try_get_task(worker_thread_t *self) {
     task_t *own_task = QUEUE(pop)(&self->task_queue);
     if (own_task != EMPTY) {
         debug(self->self_task_pop++);
@@ -148,7 +185,7 @@ task_t *try_get_task(worker_thread_t *self) {
     return NULL;
 }
 
-void *worker_thread(void *_self) {
+void *scheff_worker_thread(void *_self) {
     worker_thread_t *self = (worker_thread_t *)(_self);
     QUEUE(t) *task_queue = &self->task_queue;
     _Atomic(int64_t) *remaining_tasks = &self->scheduler->remaining_tasks;
@@ -157,7 +194,7 @@ void *worker_thread(void *_self) {
     // failed to dequeue a task, we look at the remaining task counter and conditionally
     // break out
     while (true) {
-        task_t *current_task = try_get_task(self);
+        task_t *current_task = scheff_try_get_task(self);
         if (!current_task) {
             if (RELAXED(load, remaining_tasks) == 0) {
                 break;
@@ -166,19 +203,39 @@ void *worker_thread(void *_self) {
         }
 
         if (current_task->coroutine.state != PAUSED) {
-            printf("WTF!\n");
+            printf("Fatal error -- resuming finished coroutine!\n");
+            exit(-1);
         }
-        seff_eff_t *request = (seff_eff_t *)seff_handle(
-            &current_task->coroutine, NULL, HANDLES(fork) | HANDLES(await) | HANDLES(notify));
+        void *task_arg = NULL;
+        if (current_task->wakeup_fn) {
+            wakeup_t w = current_task->wakeup_fn(current_task->wakeup_arg);
+            if (!w.wake) {
+                debug(self->self_task_push += 1);
+                QUEUE(push)(task_queue, current_task);
+                continue;
+            } else {
+                task_arg = w.result;
+            }
+        }
+        printf("Running %p\n", (void *)current_task);
+        seff_eff_t *request = (seff_eff_t *)seff_handle(&current_task->coroutine, task_arg,
+            HANDLES(fork) | HANDLES(sleep) | HANDLES(notify) | HANDLES(suspend));
         if (current_task->coroutine.state == FINISHED) {
             debug(self->return_requests++);
 
+            debug({
+                int64_t n_tasks = RELAXED(load, remaining_tasks);
+                int64_t max_tasks = RELAXED(load, &self->scheduler->max_tasks);
+                if (n_tasks > max_tasks) {
+                    RELAXED(store, &self->scheduler->max_tasks, n_tasks);
+                }
+            });
             seff_coroutine_release(&current_task->coroutine);
             free(current_task);
             RELAXED(fetch_sub, remaining_tasks, 1);
         } else {
             switch (request->id) {
-                CASE_EFFECT(request, await, {
+                CASE_EFFECT(request, sleep, {
                     debug(self->await_requests++);
 
                     SPINLOCK(payload.fut, {
@@ -194,30 +251,45 @@ void *worker_thread(void *_self) {
                     });
                     break;
                 });
+                CASE_EFFECT(request, suspend, {
+                    current_task->wakeup_fn = payload.wk;
+                    current_task->wakeup_arg = payload.arg;
+                    debug(self->self_task_push++);
+                    QUEUE(push)(task_queue, current_task);
+                });
                 CASE_EFFECT(request, fork, {
                     debug(self->fork_requests++);
                     RELAXED(fetch_add, remaining_tasks, 1);
 
                     // TODO: duplicated with scheff_schedule
-                    task_t *task = malloc(sizeof(task_t));
+                    task_t *new_task = malloc(sizeof(task_t));
                     seff_coroutine_init_sized(
-                        &task->coroutine, payload.fn, payload.arg, STACK_SIZE);
+                        &new_task->coroutine, payload.fn, payload.arg, STACK_SIZE);
+                    new_task->wakeup_fn = NULL;
                     debug(self->self_task_push += 2);
-                    QUEUE(push)(task_queue, task);
+                    QUEUE(priority_push)(task_queue, new_task);
                     QUEUE(push)(task_queue, current_task);
                     break;
                 });
                 CASE_EFFECT(request, notify, {
-                    SPINLOCK(payload.fut, {
-                        task_t *waiter = payload.fut->waiter;
-                        payload.fut->waiter = NULL;
-                        if (waiter) {
-                            debug(self->self_task_push += 1);
-                            QUEUE(priority_push)(task_queue, waiter);
-                        }
-                    });
-                    debug(self->self_task_push += 1);
-                    QUEUE(push)(task_queue, current_task);
+                    for (size_t i = 0; i < payload.n_futs; i++) {
+                        SPINLOCK(&payload.futs[0], {
+                            task_t *waiter = payload.futs[0].waiter;
+                            payload.futs[0].waiter = NULL;
+                            if (waiter) {
+                                debug(self->self_task_push += 1);
+                                QUEUE(priority_push)(task_queue, waiter);
+                            }
+                        });
+                    }
+                    if (payload.resume) {
+                        debug(self->self_task_push += 1);
+                        QUEUE(push)(task_queue, current_task);
+                    } else {
+                        seff_coroutine_release(&current_task->coroutine);
+                        free(current_task);
+                        RELAXED(fetch_sub, remaining_tasks, 1);
+                    }
                     break;
                 });
             default:
@@ -231,11 +303,12 @@ void *worker_thread(void *_self) {
 
 void scheff_run(scheff_t *scheduler) {
     for (size_t i = 1; i < scheduler->n_workers; i++) {
-        pthread_create(&scheduler->workers[i].thread, NULL, worker_thread, &scheduler->workers[i]);
+        pthread_create(
+            &scheduler->workers[i].thread, NULL, scheff_worker_thread, &scheduler->workers[i]);
     }
     // Become the first worker
     scheduler->workers[0].thread = pthread_self();
-    worker_thread(&scheduler->workers[0]);
+    scheff_worker_thread(&scheduler->workers[0]);
 
     for (size_t i = 1; i < scheduler->n_workers; i++) {
         void *ignore_return;
@@ -270,4 +343,5 @@ void scheff_print_stats(scheff_t *scheduler) {
     }
 
     printf("Relative contention %lf\n", ((double)total_contention) / scheduler->n_workers);
+    printf("Max concurrent tasks %ld\n", scheduler->max_tasks);
 }
