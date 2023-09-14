@@ -13,9 +13,11 @@
  *
  */
 
-#ifndef SEFF_TK_QUEUE_H
-#define SEFF_TK_QUEUE_H
+#ifndef SEFF_TL_QUEUE_H
+#define SEFF_TL_QUEUE_H
 
+#include <stdatomic.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -23,20 +25,21 @@ struct task_t;
 typedef struct task_t *queue_elt_t;
 
 typedef struct {
-    _Atomic(int64_t) head;
-    _Atomic(int64_t) tail;
+    _Atomic(bool) locked;
+    int64_t head;
+    int64_t tail;
     queue_elt_t buffer;
-    _Atomic(struct circular_array_t *) array;
-} tk_queue_t;
+    struct circular_array_t *array;
+} tl_queue_t;
 
-void tk_queue_init(tk_queue_t *queue, size_t log_size);
+void tl_queue_init(tl_queue_t *queue, size_t log_size);
 
 #define EMPTY ((queue_elt_t)NULL)
 #define ABORT ((queue_elt_t)(~(uintptr_t)NULL))
 
-void tk_queue_push(tk_queue_t *queue, queue_elt_t task);
-void tk_queue_priority_push(tk_queue_t *queue, queue_elt_t task);
-queue_elt_t tk_queue_pop(tk_queue_t *queue);
-queue_elt_t tk_queue_steal(tk_queue_t *queue);
+void tl_queue_push(tl_queue_t *queue, queue_elt_t task);
+void tl_queue_priority_push(tl_queue_t *queue, queue_elt_t task);
+queue_elt_t tl_queue_pop(tl_queue_t *queue);
+queue_elt_t tl_queue_steal(tl_queue_t *queue);
 
 #endif
