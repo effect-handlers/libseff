@@ -7,14 +7,13 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "atomic.h"
 #include "cl_queue.h"
 
 #undef NDEBUG
 
 #define STACK_SIZE 512
 #define INITIAL_QUEUE_LOG_SIZE 3
-
-#define RELAXED(op, ...) atomic_##op##_explicit(__VA_ARGS__, memory_order_relaxed)
 
 typedef enum { READY, WAITING } future_state_t;
 
@@ -26,33 +25,6 @@ typedef struct {
     int64_t result;
     struct task_t *waiter;
 } future_t;
-
-bool try_lock(future_t *fut) {
-    bool expected = false;
-    return atomic_compare_exchange_weak_explicit(
-        &fut->blocked, &expected, true, memory_order_relaxed, memory_order_relaxed);
-}
-
-bool unlock(future_t *fut) {
-    return atomic_exchange_explicit(&fut->blocked, false, memory_order_relaxed);
-}
-
-#ifndef NDEBUG
-#define SPINLOCK(future, block)     \
-    {                               \
-        while (!try_lock(future)) { \
-            self->spinlock_fails++; \
-        }                           \
-        block unlock(future);       \
-    }
-#else
-#define SPINLOCK(future, block)     \
-    {                               \
-        while (!try_lock(future)) { \
-        }                           \
-        block unlock(future);       \
-    }
-#endif
 
 typedef struct task_t {
     seff_coroutine_t *coroutine;
@@ -208,7 +180,7 @@ void *worker_thread(void *_self) {
             future_t *promise = current_task->promise;
 
             /* Spin until the future can be acquired */
-            SPINLOCK(promise, {
+            SPINLOCK(&promise->blocked, {
                 promise->result = (int64_t)(request);
                 promise->state = READY;
 
@@ -234,7 +206,7 @@ void *worker_thread(void *_self) {
                 CASE_EFFECT(request, await, {
                     self->await_requests++;
                     future_t *awaited = payload.fut;
-                    SPINLOCK(awaited, {
+                    SPINLOCK(&awaited->blocked, {
                         current_task->waiting = payload.fut;
                         if (payload.fut->state == READY) {
                             self->self_task_push++;

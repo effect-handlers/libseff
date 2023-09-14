@@ -23,7 +23,7 @@ DEFINE_EFFECT(fork, 0, void, {
     seff_start_fun_t *fn;
     void *arg;
 });
-DEFINE_EFFECT(sleep, 1, bool, { future_t *fut; });
+DEFINE_EFFECT(await, 1, bool, { future_t *fut; });
 DEFINE_EFFECT(notify, 2, void, {
     size_t n_futs;
     future_t *futs;
@@ -34,22 +34,37 @@ DEFINE_EFFECT(suspend, 3, void *, {
     void *arg;
 });
 
-bool try_lock(future_t *fut) {
+/* This is the closest thing C gives us to an opaque type alias */
+typedef struct scheff_waker_t {
+    task_t *task;
+} scheff_waker_t;
+
+DEFINE_EFFECT(sleep, 4, void, {
+    scheff_wakeup_manager_t *must_sleep;
+    void *arg;
+});
+DEFINE_EFFECT(wakeup, 5, size_t, {
+    size_t n_wakers;
+    struct scheff_waker_t **wakers;
+    bool resume;
+});
+
+bool scheff_try_lock(future_t *fut) {
     bool expected = false;
     return atomic_compare_exchange_weak_explicit(
         &fut->blocked, &expected, true, memory_order_acquire, memory_order_relaxed);
 }
 
-bool unlock(future_t *fut) {
+bool scheff_unlock(future_t *fut) {
     return atomic_exchange_explicit(&fut->blocked, false, memory_order_release);
 }
 
 #define SPINLOCK(future, block)            \
     {                                      \
-        while (!try_lock(future)) {        \
+        while (!scheff_try_lock(future)) { \
             debug(self->spinlock_fails++); \
         }                                  \
-        block unlock(future);              \
+        block scheff_unlock(future);       \
     }
 
 void scheff_fork(seff_start_fun_t *fn, void *arg) { PERFORM(fork, fn, arg); }
@@ -62,7 +77,7 @@ void *scheff_await(future_t *fut) {
     case READY:
         return fut->result;
     case WAITING:
-        PERFORM(sleep, fut);
+        PERFORM(await, fut);
         return fut->result;
     case CANCELLED:
         return NULL;
@@ -86,6 +101,14 @@ bool scheff_fulfill(future_t *fut, void *result, bool resume) {
 }
 
 void *scheff_suspend(scheff_wakeup_fn_t *wk, void *arg) { return PERFORM(suspend, wk, arg); }
+
+void scheff_sleep(scheff_wakeup_manager_t *must_sleep, void *arg) {
+    PERFORM(sleep, must_sleep, arg);
+}
+bool scheff_wake(scheff_waker_t *wk, bool resume) { return PERFORM(wakeup, 1, &wk, resume) > 0; }
+size_t scheff_wake_all(size_t n_wakers, scheff_waker_t **wakers, bool resume) {
+    return PERFORM(wakeup, n_wakers, wakers, resume);
+}
 
 typedef struct {
     future_t *fut;
@@ -126,6 +149,7 @@ bool scheff_init(scheff_t *self, size_t n_workers) {
     self->n_workers = n_workers;
     self->remaining_tasks = 0;
     debug(self->max_tasks = 0);
+    debug(self->task_counter = 0);
     self->workers = malloc(n_workers * sizeof(worker_thread_t));
     if (!self->workers)
         return false;
@@ -146,6 +170,7 @@ void scheff_schedule(scheff_t *self, seff_start_fun_t fn, void *arg) {
     seff_coroutine_init_sized(&task->coroutine, fn, arg, STACK_SIZE);
     task->wakeup_fn = NULL;
     task->wakeup_arg = NULL;
+    debug(task->id = self->task_counter++);
     self->remaining_tasks++;
 
     debug(self->workers[0].self_task_push++);
@@ -192,6 +217,19 @@ task_t *scheff_try_get_task(worker_thread_t *self) {
         debug(self->self_task_push += 1);      \
         QUEUE(priority_push)(task_queue, elt); \
     }
+#define FINALIZE(task)                                                      \
+    {                                                                       \
+        debug({                                                             \
+            int64_t n_tasks = RELAXED(load, remaining_tasks);               \
+            int64_t max_tasks = RELAXED(load, &self->scheduler->max_tasks); \
+            if (n_tasks > max_tasks) {                                      \
+                RELAXED(store, &self->scheduler->max_tasks, n_tasks);       \
+            }                                                               \
+        });                                                                 \
+        seff_coroutine_release(&task->coroutine);                           \
+        free(task);                                                         \
+        RELAXED(fetch_sub, remaining_tasks, 1);                             \
+    }
 void *scheff_worker_thread(void *_self) {
     worker_thread_t *self = (worker_thread_t *)(_self);
     QUEUE(t) *task_queue = &self->task_queue;
@@ -213,34 +251,27 @@ void *scheff_worker_thread(void *_self) {
             printf("Fatal error -- resuming finished coroutine!\n");
             exit(-1);
         }
-        void *task_arg = NULL;
+        void *task_arg = current_task->handle_arg;
         if (current_task->wakeup_fn) {
             wakeup_t w = current_task->wakeup_fn(current_task->wakeup_arg);
             if (!w.wake) {
                 debug(self->self_task_asleep += 1);
-                ENQUEUE(current_task);
+                ENQUEUE_PRIORITY(current_task);
                 continue;
             } else {
                 task_arg = w.result;
             }
         }
+        // printf("Running task %ld\n", current_task->id);
         seff_eff_t *request = (seff_eff_t *)seff_handle(&current_task->coroutine, task_arg,
-            HANDLES(fork) | HANDLES(sleep) | HANDLES(notify) | HANDLES(suspend));
+            HANDLES(fork) | HANDLES(await) | HANDLES(notify) | HANDLES(suspend) | HANDLES(sleep) |
+                HANDLES(wakeup));
         if (current_task->coroutine.state == FINISHED) {
-            debug({
-                self->return_requests++;
-                int64_t n_tasks = RELAXED(load, remaining_tasks);
-                int64_t max_tasks = RELAXED(load, &self->scheduler->max_tasks);
-                if (n_tasks > max_tasks) {
-                    RELAXED(store, &self->scheduler->max_tasks, n_tasks);
-                }
-            });
-            seff_coroutine_release(&current_task->coroutine);
-            free(current_task);
-            RELAXED(fetch_sub, remaining_tasks, 1);
+            debug(self->return_requests++);
+            FINALIZE(current_task);
         } else {
             switch (request->id) {
-                CASE_EFFECT(request, sleep, {
+                CASE_EFFECT(request, await, {
                     debug(self->await_requests++);
 
                     SPINLOCK(payload.fut, {
@@ -280,6 +311,7 @@ void *scheff_worker_thread(void *_self) {
                         &new_task->coroutine, payload.fn, payload.arg, STACK_SIZE);
                     new_task->wakeup_fn = NULL;
                     new_task->wakeup_arg = NULL;
+                    debug(new_task->id = RELAXED(fetch_add, &self->scheduler->task_counter, 1));
 
                     ENQUEUE(current_task);
                     ENQUEUE_PRIORITY(new_task);
@@ -301,9 +333,42 @@ void *scheff_worker_thread(void *_self) {
                     if (payload.resume) {
                         ENQUEUE(current_task);
                     } else {
-                        seff_coroutine_release(&current_task->coroutine);
-                        free(current_task);
-                        RELAXED(fetch_sub, remaining_tasks, 1);
+                        FINALIZE(current_task);
+                    }
+                    break;
+                });
+                CASE_EFFECT(request, sleep, {
+                    debug(self->sleep_requests++);
+
+                    scheff_waker_t *waker = (scheff_waker_t *)current_task;
+                    if (payload.must_sleep(waker, payload.arg)) {
+                        RELAXED(store, &current_task->sleeping, true);
+                    } else {
+                        ENQUEUE(current_task);
+                    }
+
+                    break;
+                });
+                CASE_EFFECT(request, wakeup, {
+                    debug(self->wakeup_requests++);
+
+                    size_t woken = 0;
+                    for (size_t i = 0; i < payload.n_wakers; i++) {
+                        task_t *task = (task_t *)payload.wakers[i];
+                        bool sleeping = false;
+                        if (RELAXED(exchange, &task->sleeping, &sleeping)) {
+                            // We have woken this task, and are now responsible
+                            // for enqueuing it
+                            woken += 1;
+                            ENQUEUE_PRIORITY(task);
+                        }
+                    }
+
+                    current_task->handle_arg = (void *)(uintptr_t)woken;
+                    if (payload.resume) {
+                        ENQUEUE(current_task);
+                    } else {
+                        FINALIZE(current_task);
                     }
                     break;
                 });
@@ -315,6 +380,7 @@ void *scheff_worker_thread(void *_self) {
 
     return NULL;
 }
+#undef FINALIZE
 #undef ENQUEUE_PRIORITY
 #undef ENQUEUE
 
@@ -334,6 +400,7 @@ void scheff_run(scheff_t *scheduler) {
 }
 
 void scheff_print_stats(scheff_t *scheduler) {
+#ifndef NDEBUG
     int64_t total_contention = 0;
     for (size_t i = 0; i < scheduler->n_workers; i++) {
         printf("Worker %lu:\n", i);
@@ -344,10 +411,11 @@ void scheff_print_stats(scheff_t *scheduler) {
         total_contention += scheduler->workers[i].spinlock_fails;
 
 #define X(counter) printf("\t" #counter ": %ld\n", scheduler->workers[i].counter);
-        SCHEFF_DEBUG_COUNTERS
+        SCHEFF_DEBUG_COUNTERS;
 #undef X
     }
 
     printf("Relative contention %lf\n", ((double)total_contention) / scheduler->n_workers);
     printf("Max concurrent tasks %ld\n", scheduler->max_tasks);
+#endif
 }

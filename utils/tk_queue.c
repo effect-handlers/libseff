@@ -14,6 +14,7 @@
  */
 
 #include "tk_queue.h"
+#include "atomic.h"
 #include "circular_array.h"
 
 #include <assert.h>
@@ -22,10 +23,6 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#define RELAXED(op, ...) atomic_##op##_explicit(__VA_ARGS__, memory_order_relaxed)
-#define ACQUIRE(op, ...) atomic_##op##_explicit(__VA_ARGS__, memory_order_acquire)
-#define RELEASE(op, ...) atomic_##op##_explicit(__VA_ARGS__, memory_order_release)
 
 void tk_queue_init(tk_queue_t *self, size_t log_size) {
     self->head = 0;

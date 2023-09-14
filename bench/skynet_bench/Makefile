@@ -1,4 +1,4 @@
-all: output/libseff output/libseff_async output/libseff_async_tk output/libseff_scheff output/libseff_scheff_suspend
+all: output/libseff output/libseff_async output/libseff_async_tk output/libseff_scheff output/libseff_scheff_suspend output/libseff_scheff_sleep
 
 include ../common.mk
 
@@ -16,3 +16,6 @@ output/libseff_scheff: libseff_scheff.c $(LIBSEFF_LIB) | output
 
 output/libseff_scheff_suspend: libseff_scheff_suspend.c $(LIBSEFF_LIB) | output
 	$(CC) $(CFLAGS_LIBSEFF) libseff_scheff_suspend.c -o $@ $(LDFLAGS_LIBSEFF)
+
+output/libseff_scheff_sleep: libseff_scheff_sleep.c $(LIBSEFF_LIB) | output
+	$(CC) $(CFLAGS_LIBSEFF) libseff_scheff_sleep.c -o $@ $(LDFLAGS_LIBSEFF)

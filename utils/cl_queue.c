@@ -14,14 +14,13 @@
  */
 
 #include "cl_queue.h"
+#include "atomic.h"
 #include "circular_array.h"
 
 #include <assert.h>
 #include <stdatomic.h>
 #include <stddef.h>
 #include <stdlib.h>
-
-#define RELAXED(op, ...) atomic_##op##_explicit(__VA_ARGS__, memory_order_relaxed)
 
 void cl_queue_init(cl_queue_t *self, size_t log_size) {
     self->bottom = 0;

@@ -24,10 +24,9 @@
 #include "cl_queue.h"
 #include "seff.h"
 #include "tk_queue.h"
+#include "tl_queue.h"
 
-#define QUEUE(t) tk_queue_##t
-
-#undef NDEBUG
+#define QUEUE(t) tl_queue_##t
 
 struct task_t;
 struct future_t;
@@ -57,19 +56,32 @@ typedef struct {
 typedef wakeup_t(scheff_wakeup_fn_t)(void *);
 
 typedef struct task_t {
+    _Atomic(bool) sleeping;
     seff_coroutine_t coroutine;
     scheff_wakeup_fn_t *wakeup_fn;
     void *wakeup_arg;
+    void *handle_arg;
+#ifndef NDEBUG
+    int64_t id;
+#endif
 } task_t;
 
-#define SCHEFF_DEBUG_COUNTERS                                                                      \
-    X(self_task_push)                                                                              \
-    X(self_task_pop)                                                                               \
-    X(self_task_abort)                                                                             \
-    X(self_task_empty)                                                                             \
-    X(self_task_asleep)                                                                            \
-    X(stolen_task_ok) X(stolen_task_abort) X(stolen_task_empty) X(spinlock_fails) X(fork_requests) \
-        X(await_requests) X(notify_requests) X(suspend_requests) X(return_requests)
+struct scheff_waker_t;
+typedef bool(scheff_wakeup_manager_t)(struct scheff_waker_t *waker, void *arg);
+
+#define SCHEFF_DEBUG_COUNTERS \
+    X(self_task_push)         \
+    X(self_task_pop)          \
+    X(self_task_abort)        \
+    X(self_task_empty)        \
+    X(self_task_asleep)       \
+    X(stolen_task_ok)         \
+    X(stolen_task_abort)      \
+    X(stolen_task_empty)      \
+    X(spinlock_fails)         \
+    X(fork_requests)          \
+    X(await_requests)         \
+    X(notify_requests) X(suspend_requests) X(sleep_requests) X(wakeup_requests) X(return_requests)
 
 typedef struct worker_thread_t {
     struct scheff_t *scheduler;
@@ -88,6 +100,7 @@ typedef struct scheff_t {
     size_t n_workers;
     _Atomic(int64_t) remaining_tasks;
 #ifndef NDEBUG
+    _Atomic(int64_t) task_counter;
     _Atomic(int64_t) max_tasks;
 #endif
     worker_thread_t *workers;
@@ -103,5 +116,9 @@ void *scheff_await(future_t *fut);
 bool scheff_fulfill(future_t *fut, void *result, bool resume);
 
 void *scheff_suspend(scheff_wakeup_fn_t *wk, void *wk_arg);
+
+void scheff_sleep(scheff_wakeup_manager_t *must_sleep, void *arg);
+bool scheff_wake(struct scheff_waker_t *waker, bool resume);
+size_t scheff_wake_all(size_t n_wakers, struct scheff_waker_t **waker, bool resume);
 
 void scheff_async(seff_start_fun_t *fn, void *arg, future_t *fut);
