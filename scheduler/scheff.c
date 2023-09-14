@@ -14,10 +14,7 @@
  */
 
 #include "scheff.h"
-
-#define RELAXED(op, ...) atomic_##op##_explicit(__VA_ARGS__, memory_order_relaxed)
-#define ACQUIRE(op, ...) atomic_##op##_explicit(__VA_ARGS__, memory_order_acquire)
-#define RELEASE(op, ...) atomic_##op##_explicit(__VA_ARGS__, memory_order_release)
+#include "atomic.h"
 
 DEFINE_EFFECT(fork, 0, void, {
     seff_start_fun_t *fn;
@@ -48,24 +45,6 @@ DEFINE_EFFECT(wakeup, 5, size_t, {
     struct scheff_waker_t **wakers;
     bool resume;
 });
-
-bool scheff_try_lock(future_t *fut) {
-    bool expected = false;
-    return atomic_compare_exchange_weak_explicit(
-        &fut->blocked, &expected, true, memory_order_acquire, memory_order_relaxed);
-}
-
-bool scheff_unlock(future_t *fut) {
-    return atomic_exchange_explicit(&fut->blocked, false, memory_order_release);
-}
-
-#define SPINLOCK(future, block)            \
-    {                                      \
-        while (!scheff_try_lock(future)) { \
-            debug(self->spinlock_fails++); \
-        }                                  \
-        block scheff_unlock(future);       \
-    }
 
 void scheff_fork(seff_start_fun_t *fn, void *arg) { PERFORM(fork, fn, arg); }
 void *scheff_await(future_t *fut) {
@@ -274,7 +253,7 @@ void *scheff_worker_thread(void *_self) {
                 CASE_EFFECT(request, await, {
                     debug(self->await_requests++);
 
-                    SPINLOCK(payload.fut, {
+                    SPINLOCK(&payload.fut->blocked, {
                         if (payload.fut->waiter) {
                             exit(-1);
                         }
@@ -321,7 +300,7 @@ void *scheff_worker_thread(void *_self) {
                     debug(self->notify_requests++);
 
                     for (size_t i = 0; i < payload.n_futs; i++) {
-                        SPINLOCK(&payload.futs[0], {
+                        SPINLOCK(&payload.futs[0].blocked, {
                             task_t *waiter = payload.futs[0].waiter;
                             payload.futs[0].waiter = NULL;
                             if (waiter) {
