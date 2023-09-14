@@ -75,6 +75,7 @@ static inline __attribute__((no_split_stack)) void *seff_perform(effect_id eff_i
 E __attribute__((noreturn, no_split_stack)) void seff_throw(effect_id effect, void *payload);
 E __attribute__((noreturn, no_split_stack)) void seff_return(seff_coroutine_t *k, void *result);
 E __attribute__((noreturn, no_split_stack)) void seff_implicit_return(void);
+E __attribute__((noreturn, no_split_stack)) void coroutine_prelude(void);
 
 E __attribute__((no_split_stack)) void *seff_handle(
     seff_coroutine_t *k, void *arg, effect_set handled);

@@ -27,6 +27,8 @@
 __morestack_non_split:
     # r10 := r10 + SYSCALL_SEGMENT_SIZE
     # RSP - r10 < SEFF_STACK_TOP?
+    .cfi_startproc
+    .cfi_def_cfa %rsp,16
     movq syscall_segment_size(%rip), %rax
     addq %rax, %r10
     subq %r10, %rsp
@@ -46,20 +48,62 @@ morestack_non_split_reserve_stack:
     addq %r10, %rsp
 
     # Fallthrough into __morestack
+    .cfi_endproc
 .size __morestack_non_split, . - __morestack_non_split
 
+/* DWARF unwind info instructions: <http://dwarfstd.org/doc/DWARF5.pdf>
+   Register mapping: <https://raw.githubusercontent.com/wiki/hjl-tools/x86-psABI/x86-64-psABI-1.0.pdf> (page 61)
+*/
+#define DW_def_cfa_expression     0x0F
+#define DW_CFA_expression         0x10
+#define DW_CFA_val_offset         0x14
+#define DW_expression             0x10
+#define DW_val_expression         0x16
+#define DW_OP_deref               0x06        /* dereference the top of the expression stack */
+#define DW_OP_breg(r)             (0x70+r)    /* push `register + ofs` on the expression stack */
+#define DW_OP_plus_uconst         0x23
+#define DW_OP_lit(n)              (0x30+n)
+#define DW_OP_minus               0x1C
+#define DW_REG_rip                16
+#define DW_REG_rax                0
+#define DW_REG_rdx                1
+#define DW_REG_rcx                2
+#define DW_REG_rbx                3
+#define DW_REG_rsi                4
+#define DW_REG_rdi                5
+#define DW_REG_rbp                6
+#define DW_REG_rsp                7
+#define DW_REG_r8                 8
+#define DW_REG_r9                 9
+#define DW_REG_r10                10
+
 __morestack:
+    .cfi_startproc
+    .cfi_signal_frame
+    .cfi_def_cfa %rsp, 16
+
     # Save the stack pointer of the segment we're about to leave
     # Henceforth, we cannot clobber %rbx
     pushq %rbx
+    .cfi_adjust_cfa_offset 8
+	.cfi_offset %rbx, -24
+
     movq %rsp, %rbx
+    .cfi_def_cfa_register %rbx
+    .cfi_offset rip, -8
+    # .cfi_val_offset  rsp, 1
+    .cfi_escape DW_CFA_val_offset, DW_REG_rsp, 1
+
 
     # Switch to the system stack
     movq %fs:_seff_system_stack@tpoff, %rsp
 
     # New frame
+    .cfi_remember_state
     pushq %rbp
+
     pushq %rbp
+
     movq %rsp, %rbp
 
     # Save registers -- TODO: reduce!
@@ -71,6 +115,16 @@ __morestack:
     pushq %rcx
     pushq %r8
     pushq %r9
+
+    .cfi_escape DW_CFA_expression, DW_REG_rbp, 2, DW_OP_breg(DW_REG_rbp), 0x00
+    .cfi_escape DW_CFA_expression, DW_REG_r10, 2, DW_OP_breg(DW_REG_rbp), 0x08
+    .cfi_escape DW_CFA_expression, DW_REG_rax, 2, DW_OP_breg(DW_REG_rbp), 0x10
+    .cfi_escape DW_CFA_expression, DW_REG_rdi, 2, DW_OP_breg(DW_REG_rbp), 0x18
+    .cfi_escape DW_CFA_expression, DW_REG_rsi, 2, DW_OP_breg(DW_REG_rbp), 0x20
+    .cfi_escape DW_CFA_expression, DW_REG_rdx, 2, DW_OP_breg(DW_REG_rbp), 0x28
+    .cfi_escape DW_CFA_expression, DW_REG_rcx, 2, DW_OP_breg(DW_REG_rbp), 0x30
+    .cfi_escape DW_CFA_expression, DW_REG_r8, 2, DW_OP_breg(DW_REG_rbp),  0x38
+    .cfi_escape DW_CFA_expression, DW_REG_r9, 2, DW_OP_breg(DW_REG_rbp),  0x40
 
     leaq -8(%rbp), %rdi # Address of frame size
     leaq 24(%rbx), %rsi # Address of parameters
@@ -95,6 +149,7 @@ __morestack:
     movq -56(%rbp),%r8
     movq -64(%rbp),%r9
     movq (%rbp), %rbp
+    .cfi_restore_state
 
     # This is the return address of the call to __morestack
     movq 8(%rbx), %r10
@@ -114,6 +169,7 @@ __morestack:
     movq %rbx,%rsp
     popq %rbx
     ret
+    .cfi_endproc
 .size __morestack, . - __morestack
 
 seff_mem_thread_init:

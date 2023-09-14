@@ -87,12 +87,12 @@ seff_coroutine_t *seff_coroutine_new_sized(seff_start_fun_t *fn, void *arg, size
     return k;
 }
 
-void coroutine_prelude(void);
-__asm__("coroutine_prelude:"
-        "popq %rdi;"
-        "popq %rsi;"
-        "popq %rdx;"
-        "jmp *%rdx;");
+// void coroutine_prelude(void);
+// __asm__("coroutine_prelude:"
+//         "popq %rdi;"
+//         "popq %rsi;"
+//         "popq %rdx;"
+//         "jmp *%rdx;");
 
 // TODO: We're getting this from object file seff_mem.o, this seems dirty
 extern size_t default_frame_size;
@@ -134,8 +134,8 @@ bool seff_coroutine_init_sized(
     k->resume_point.rsp = ((char *)k->resume_point.rsp) - pad;
 
     // Adding the return point to set the coroutine to finished
-    frame_push(&k->resume_point, k);
-    frame_push(&k->resume_point, (void *)seff_implicit_return);
+    // frame_push(&k->resume_point, k);
+    // frame_push(&k->resume_point, (void *)seff_implicit_return);
 
     frame_push(&k->resume_point, (void *)fn);
     frame_push(&k->resume_point, arg);
