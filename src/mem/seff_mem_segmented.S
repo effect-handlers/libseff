@@ -11,6 +11,7 @@
 # See the Mulan PSL v2 for more details.
 #
 
+#include "../asm/dwarf.S"
 #include "../asm/seff_types.S"
 
 # Clang/GCC -fsplit-stack expects the address of the top of the current segment to be
@@ -23,10 +24,16 @@
 .global __morestack
 .global seff_mem_thread_init
 .global syscall_segment_size
+.type __morestack_non_split,%function
+.type __morestack,%function
+.type seff_mem_thread_init,%function
+
 
 __morestack_non_split:
     # r10 := r10 + SYSCALL_SEGMENT_SIZE
     # RSP - r10 < SEFF_STACK_TOP?
+    .cfi_startproc
+    .cfi_def_cfa %rsp,16 # this skips the previous stack frame, which is just the prologue of the function
     movq syscall_segment_size(%rip), %rax
     addq %rax, %r10
     subq %r10, %rsp
@@ -46,20 +53,36 @@ morestack_non_split_reserve_stack:
     addq %r10, %rsp
 
     # Fallthrough into __morestack
+    .cfi_endproc
 .size __morestack_non_split, . - __morestack_non_split
 
 __morestack:
+    .cfi_startproc
+    .cfi_signal_frame  # needed to make gdb happy
+    .cfi_def_cfa %rsp, 16  # skip the function prologue stack frame, for the better
+
     # Save the stack pointer of the segment we're about to leave
     # Henceforth, we cannot clobber %rbx
     pushq %rbx
+    .cfi_adjust_cfa_offset 8
+	.cfi_offset %rbx, -24
+
     movq %rsp, %rbx
+    .cfi_def_cfa_register %rbx  # CFA is now on $rbx
+    .cfi_offset rip, -8
+    # .cfi_val_offset  rsp, 1  # this directive should work, but it doesnt
+    .cfi_escape DW_CFA_val_offset, DW_REG_rsp, 1
+
 
     # Switch to the system stack
     movq %fs:_seff_system_stack@tpoff, %rsp
 
     # New frame
+    .cfi_remember_state
     pushq %rbp
+
     pushq %rbp
+
     movq %rsp, %rbp
 
     # Save registers -- TODO: reduce!
@@ -71,6 +94,17 @@ __morestack:
     pushq %rcx
     pushq %r8
     pushq %r9
+
+    # we'd like to change the CFA to %rbp, but I don't think that's a good idea
+    .cfi_escape DW_CFA_expression, DW_REG_rbp, 2, DW_OP_breg(DW_REG_rbp), 0x00
+    .cfi_escape DW_CFA_expression, DW_REG_r10, 2, DW_OP_breg(DW_REG_rbp), 0x08
+    .cfi_escape DW_CFA_expression, DW_REG_rax, 2, DW_OP_breg(DW_REG_rbp), 0x10
+    .cfi_escape DW_CFA_expression, DW_REG_rdi, 2, DW_OP_breg(DW_REG_rbp), 0x18
+    .cfi_escape DW_CFA_expression, DW_REG_rsi, 2, DW_OP_breg(DW_REG_rbp), 0x20
+    .cfi_escape DW_CFA_expression, DW_REG_rdx, 2, DW_OP_breg(DW_REG_rbp), 0x28
+    .cfi_escape DW_CFA_expression, DW_REG_rcx, 2, DW_OP_breg(DW_REG_rbp), 0x30
+    .cfi_escape DW_CFA_expression, DW_REG_r8, 2, DW_OP_breg(DW_REG_rbp),  0x38
+    .cfi_escape DW_CFA_expression, DW_REG_r9, 2, DW_OP_breg(DW_REG_rbp),  0x40
 
     leaq -8(%rbp), %rdi # Address of frame size
     leaq 24(%rbx), %rsi # Address of parameters
@@ -95,6 +129,7 @@ __morestack:
     movq -56(%rbp),%r8
     movq -64(%rbp),%r9
     movq (%rbp), %rbp
+    .cfi_restore_state
 
     # This is the return address of the call to __morestack
     movq 8(%rbx), %r10
@@ -114,6 +149,7 @@ __morestack:
     movq %rbx,%rsp
     popq %rbx
     ret
+    .cfi_endproc
 .size __morestack, . - __morestack
 
 seff_mem_thread_init:

@@ -13,17 +13,23 @@
 # Architecture-specific code for context-switching
 # This file is for the System V (Linux/OSX) 64 bit architecture
 #
+
+#include "dwarf.S"
 #include "seff_types.S"
 
 #ifdef STACK_POLICY_SEGMENTED
 #define SEFF_STACK_TOP %fs:0x70
 #endif
 
-# TODO: if we add a type to these, with `.type <sym>, @function`, the tests crash
 .global seff_return
-.global seff_implicit_return
 .global seff_yield
 .global seff_handle
+.global coroutine_prelude
+
+.type seff_return,%function
+.type seff_yield,%function
+.type seff_handle,%function
+.type coroutine_prelude,%function
 
 .global _seff_current_coroutine
 .global _seff_system_stack
@@ -82,6 +88,7 @@ _seff_paused_coroutine_stack_top:
 
 # void* seff_yield(seff_coroutine_t* self, void* arg)
 seff_yield:
+    .cfi_startproc
     # self in %rdi
     # arg in %rsi
 
@@ -119,10 +126,12 @@ seff_yield:
 
     movq %rsi, %rax
     jmp *%r10
+    .cfi_endproc
 .size seff_yield, . - seff_yield
 
 # void* seff_handle(seff_coroutine_t* k, void* arg, effect_set handled)
 seff_handle:
+    .cfi_startproc
     # k in %rdi
     # arg in %rsi
     # handled in %rdx
@@ -171,21 +180,45 @@ seff_handle_after_store_system_stack:
 
     movq %rsi, %rax
     jmp *%r10
+    .cfi_endproc
 .size seff_handle, . - seff_handle
 
+# void coroutine_prelude(void);
+coroutine_prelude:
+    .cfi_startproc
+    .cfi_signal_frame           # needed or else gdb does not allow switching frames to a lower address in the backtrace
 
-# void seff_implicit_return(seff_coroutine_t* k, void* result)
-# It's the same as seff_return, but the parameters are passed
-# on the stack and on %rax
-# falls to seff_return
-seff_implicit_return:
-    movq %rax, %rsi
     popq %rdi
+    # At this point we are already at a new stack frame, we need to recover the CFA from rdi
+    .cfi_escape DW_CFA_def_cfa_expression, 2, DW_OP_breg(DW_REG_rdi), seff_coroutine_t__resume_point
+    # And then every other register from its offset to CFA
+    .cfi_offset rip, seff_cont_t__ip
+    .cfi_offset rbx, seff_cont_t__rbx
+    .cfi_offset rsp, seff_cont_t__rsp
+    .cfi_offset rbp, seff_cont_t__rbp
+    .cfi_offset r12, seff_cont_t__r12
+    .cfi_offset r13, seff_cont_t__r13
+    .cfi_offset r14, seff_cont_t__r14
+    .cfi_offset r15, seff_cont_t__r15
+
+    popq %rsi
+    popq %rdx
+    push %rdi # we need this push for alignment reasons anyway
+    # Since rdi is a scratch register, from now our CFA relates to some position in memory
+    # Note that this instruction is executed when unwinding from below this line, with whatever $rdi
+    # has at that moment
+    .cfi_escape DW_CFA_def_cfa_expression, 5, DW_OP_breg(DW_REG_rsp), 0, DW_OP_deref, DW_OP_plus_uconst, seff_coroutine_t__resume_point
+
+    call *%rdx
+    pop %rdi
     # FALLTHROUGH TO SEFF_RETURN
-.size seff_implicit_return, . - seff_implicit_return
+    movq %rax, %rsi
+    .cfi_endproc
+.size coroutine_prelude, . - coroutine_prelude
 
 # void seff_return(seff_coroutine_t* k, void* result)
 seff_return:
+    .cfi_startproc
     # k in %rdi
     # result in %rsi
     movq $seff_coroutine_state_t__FINISHED, (seff_coroutine_t__state)(%rdi)
@@ -215,4 +248,10 @@ seff_return:
 
     movq %rsi, %rax
     jmp *%r10
-.size seff_implicit_return, . - seff_implicit_return
+    .cfi_endproc
+.size seff_return, . - seff_return
+
+# This notes indicate that this file was compiled with split stack
+.section	.note.GNU-stack,"",@progbits
+.section	.note.GNU-split-stack,"",@progbits
+.section	.note.GNU-no-split-stack,"",@progbits
