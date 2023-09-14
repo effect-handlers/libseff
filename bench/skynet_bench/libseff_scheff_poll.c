@@ -8,21 +8,22 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "atomic.h"
 #include "scheff.h"
 
 typedef struct {
     _Atomic(bool) ready;
-    void *value;
+    int64_t value;
 } lwp_t;
 
-wakeup_t lwp_ready(void *_promise) {
+bool lwp_ready(void *_promise) {
     lwp_t *promise = (lwp_t *)_promise;
-    return (wakeup_t){atomic_load_explicit(&promise->ready, memory_order_relaxed), promise->value};
+    return RELAXED(load, &promise->ready);
 }
 
-void lwp_fulfill(lwp_t *promise, void *value) {
+void lwp_fulfill(lwp_t *promise, int64_t value) {
     promise->value = value;
-    atomic_store_explicit(&promise->ready, true, memory_order_release);
+    RELAXED(store, &promise->ready, true);
 }
 
 typedef struct {
@@ -37,7 +38,7 @@ void *skynet(seff_coroutine_t *self, void *_arg) {
     lwp_t *result_promise = &((skynet_args_t *)_arg)->result_promise;
 
     if (num >= last_layer) {
-        lwp_fulfill(result_promise, (void *)(num - last_layer));
+        lwp_fulfill(result_promise, num - last_layer);
     } else {
         int64_t sum = 0;
 
@@ -50,11 +51,10 @@ void *skynet(seff_coroutine_t *self, void *_arg) {
             scheff_fork(skynet, &args[i]);
         }
         for (size_t i = 0; i < 10; i++) {
-            int64_t partial_result =
-                (int64_t)(uintptr_t)scheff_suspend(lwp_ready, &args[i].result_promise);
-            sum += partial_result;
+            scheff_poll(lwp_ready, &args[i].result_promise);
+            sum += args[i].result_promise.value;
         }
-        lwp_fulfill(result_promise, (void *)sum);
+        lwp_fulfill(result_promise, sum);
     }
     return NULL;
 }
