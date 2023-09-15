@@ -76,11 +76,12 @@ coroutine_prelude:
     .cfi_offset rbp, seff_cont_t__rbp
     # (...) And other registers
 
-    mov %rdi, %r15
-    .cfi_register %rdi, %r15
-    .cfi_escape DW_CFA_def_cfa_expression, 2, DW_OP_breg(DW_REG_r15), seff_coroutine_t__resume_point # (2)
     popq %rsi
     popq %rdx
+    push %rdi
+    # (2)
+    .cfi_escape DW_CFA_def_cfa_expression, 5, DW_OP_breg(DW_REG_rsp), 0, DW_OP_deref, DW_OP_plus_uconst, seff_coroutine_t__resume_point
+
     call *%rdx
     # coroutine_prelude continues
 ```
@@ -103,8 +104,9 @@ When the whole thing is evaluated the new value of CFA is at the top of the stac
 `.cfi_offset rip, seff_cont_t__ip` and alike indicate that the previous value of `%rip`
 can be found at the given offset (`seff_cont_t__ip`) from the CFA.
 
-On (2) we are saving `%rdi` to `%r15`, since `%rdi` is a scratch register. This means,
-from here on now the calculation of CFA changes (not by much); note that the calculations for registers indicated on (1) won't change in relationship with the CFA.
+On (2) we are pushing `%rdi`, since `%rdi` is a scratch register. This means,
+from here on now the calculation of CFA changes (not by much);
+note that the offsets for registers indicated on (1) won't change in relationship with the CFA.
 
 > Note that there's no way to actually save %rdi, CFI doesn't execute with your code,
 > it's executed backwards when unwinding. The `call *%rdx` could very well override

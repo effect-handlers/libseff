@@ -201,18 +201,18 @@ coroutine_prelude:
     .cfi_offset r14, seff_cont_t__r14
     .cfi_offset r15, seff_cont_t__r15
 
-    mov %rdi, %r15
-    .cfi_register %rdi, %r15
-    # Since rdi is a scratch register, from now our CFA relates to r15
-    # Note that this instruction is executed when unwinding from below this line, with whatever $rdi
-    # has at that moment
-    .cfi_escape DW_CFA_def_cfa_expression, 2, DW_OP_breg(DW_REG_r15), seff_coroutine_t__resume_point
     popq %rsi
     popq %rdx
+    push %rdi # we need this push for alignment reasons anyway
+    # Since rdi is a scratch register, from now our CFA relates to some position in memory
+    # Note that this instruction is executed when unwinding from below this line, with whatever $rdi
+    # has at that moment
+    .cfi_escape DW_CFA_def_cfa_expression, 5, DW_OP_breg(DW_REG_rsp), 0, DW_OP_deref, DW_OP_plus_uconst, seff_coroutine_t__resume_point
+
     call *%rdx
+    pop %rdi
     # FALLTHROUGH TO SEFF_RETURN
     movq %rax, %rsi
-    mov %r15, %rdi
     .cfi_endproc
 .size coroutine_prelude, . - coroutine_prelude
 

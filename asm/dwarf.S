@@ -23,6 +23,7 @@
 
 # Expression and location (§ 7.7)
 #define DW_OP_deref               0x06        /* top := *pop() */
+#define DW_OP_plus_uconst         0x23        /* top := pop() + const */
 #define DW_OP_breg(r)             (0x70+r)    /* push `register + ofs` on the expression stack */
 
 #
