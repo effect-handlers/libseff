@@ -250,3 +250,8 @@ seff_return:
     jmp *%r10
     .cfi_endproc
 .size seff_return, . - seff_return
+
+# This notes indicate that this file was compiled with split stack
+.section	.note.GNU-stack,"",@progbits
+.section	.note.GNU-split-stack,"",@progbits
+.section	.note.GNU-no-split-stack,"",@progbits
