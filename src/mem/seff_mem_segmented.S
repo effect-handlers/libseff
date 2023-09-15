@@ -11,6 +11,7 @@
 # See the Mulan PSL v2 for more details.
 #
 
+#include "../asm/dwarf.S"
 #include "../asm/seff_types.S"
 
 # Clang/GCC -fsplit-stack expects the address of the top of the current segment to be
@@ -23,12 +24,16 @@
 .global __morestack
 .global seff_mem_thread_init
 .global syscall_segment_size
+.type __morestack_non_split,%function
+.type __morestack,%function
+.type seff_mem_thread_init,%function
+
 
 __morestack_non_split:
     # r10 := r10 + SYSCALL_SEGMENT_SIZE
     # RSP - r10 < SEFF_STACK_TOP?
     .cfi_startproc
-    .cfi_def_cfa %rsp,16
+    .cfi_def_cfa %rsp,16 # this skips the previous stack frame, which is just the prologue of the function
     movq syscall_segment_size(%rip), %rax
     addq %rax, %r10
     subq %r10, %rsp
@@ -51,36 +56,10 @@ morestack_non_split_reserve_stack:
     .cfi_endproc
 .size __morestack_non_split, . - __morestack_non_split
 
-/* DWARF unwind info instructions: <http://dwarfstd.org/doc/DWARF5.pdf>
-   Register mapping: <https://raw.githubusercontent.com/wiki/hjl-tools/x86-psABI/x86-64-psABI-1.0.pdf> (page 61)
-*/
-#define DW_def_cfa_expression     0x0F
-#define DW_CFA_expression         0x10
-#define DW_CFA_val_offset         0x14
-#define DW_expression             0x10
-#define DW_val_expression         0x16
-#define DW_OP_deref               0x06        /* dereference the top of the expression stack */
-#define DW_OP_breg(r)             (0x70+r)    /* push `register + ofs` on the expression stack */
-#define DW_OP_plus_uconst         0x23
-#define DW_OP_lit(n)              (0x30+n)
-#define DW_OP_minus               0x1C
-#define DW_REG_rip                16
-#define DW_REG_rax                0
-#define DW_REG_rdx                1
-#define DW_REG_rcx                2
-#define DW_REG_rbx                3
-#define DW_REG_rsi                4
-#define DW_REG_rdi                5
-#define DW_REG_rbp                6
-#define DW_REG_rsp                7
-#define DW_REG_r8                 8
-#define DW_REG_r9                 9
-#define DW_REG_r10                10
-
 __morestack:
     .cfi_startproc
-    .cfi_signal_frame
-    .cfi_def_cfa %rsp, 16
+    .cfi_signal_frame  # needed to make gdb happy
+    .cfi_def_cfa %rsp, 16  # skip the function prologue stack frame, for the better
 
     # Save the stack pointer of the segment we're about to leave
     # Henceforth, we cannot clobber %rbx
@@ -89,9 +68,9 @@ __morestack:
 	.cfi_offset %rbx, -24
 
     movq %rsp, %rbx
-    .cfi_def_cfa_register %rbx
+    .cfi_def_cfa_register %rbx  # CFA is now on $rbx
     .cfi_offset rip, -8
-    # .cfi_val_offset  rsp, 1
+    # .cfi_val_offset  rsp, 1  # this directive should work, but it doesnt
     .cfi_escape DW_CFA_val_offset, DW_REG_rsp, 1
 
 
@@ -116,6 +95,7 @@ __morestack:
     pushq %r8
     pushq %r9
 
+    # we'd like to change the CFA to %rbp, but I don't think that's a good idea
     .cfi_escape DW_CFA_expression, DW_REG_rbp, 2, DW_OP_breg(DW_REG_rbp), 0x00
     .cfi_escape DW_CFA_expression, DW_REG_r10, 2, DW_OP_breg(DW_REG_rbp), 0x08
     .cfi_escape DW_CFA_expression, DW_REG_rax, 2, DW_OP_breg(DW_REG_rbp), 0x10
