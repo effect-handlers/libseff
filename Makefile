@@ -1,13 +1,13 @@
-# 
+#
 # Copyright (c) 2023 Huawei Technologies Co., Ltd.
-# 
+#
 # libseff is licensed under Mulan PSL v2.
-# You can use this software according to the terms and conditions of the Mulan PSL v2. 
+# You can use this software according to the terms and conditions of the Mulan PSL v2.
 # You may obtain a copy of Mulan PSL v2 at:
-# 	    http://license.coscl.org.cn/MulanPSL2 
+# 	    http://license.coscl.org.cn/MulanPSL2
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
-# FIT FOR A PARTICULAR PURPOSE.  
+# FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
 #
 
@@ -80,6 +80,12 @@ output/actors.o: src/seff.h src/seff_types.h utils/scheduler.h utils/actors.h ut
 output/cl_queue.o: utils/cl_queue.h utils/cl_queue.c | output/lib
 	$(CC) $(CFLAGS) -I./utils -o output/cl_queue.o -c utils/cl_queue.c
 
+output/net.o: utils/net.c utils/net.h | output/lib
+	$(CC) $(CFLAGS) -I./src -I./utils -o $@ -c $<
+
+output/http_response.o: utils/http_response.c utils/http_response.h | output/lib
+	$(CC) $(CFLAGS) -o $@ -c $<
+
 output/tests/%: tests/%.c output/lib/libutils.a output/lib/libseff.a | output/tests
 	$(CC) $(CFLAGS) -I./src -I./utils -o $@.o -c $<
 	$(CC) $(CFLAGS) -I./src -I./utils -o $@ $@.o output/lib/libseff.a output/lib/libutils.a $(LDFLAGS)
@@ -128,5 +134,5 @@ clean:
 output/lib/libseff.a: output/seff_mem.o output/seff_mem_asm.o output/seff.o output/seff_asm.o | output/lib
 	ar -rcs output/lib/libseff.a output/seff_mem.o output/seff_mem_asm.o output/seff.o output/seff_asm.o
 
-output/lib/libutils.a: output/actors.o output/cl_queue.o | output/lib
-	ar -rcs output/lib/libutils.a output/actors.o output/cl_queue.o
+output/lib/libutils.a: output/actors.o output/cl_queue.o output/net.o output/http_response.o | output/lib
+	ar -rcs $@ $^

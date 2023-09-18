@@ -1,13 +1,13 @@
-# 
+#
 # Copyright (c) 2023 Huawei Technologies Co., Ltd.
-# 
+#
 # libseff is licensed under Mulan PSL v2.
-# You can use this software according to the terms and conditions of the Mulan PSL v2. 
+# You can use this software according to the terms and conditions of the Mulan PSL v2.
 # You may obtain a copy of Mulan PSL v2 at:
-# 	    http://license.coscl.org.cn/MulanPSL2 
+# 	    http://license.coscl.org.cn/MulanPSL2
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
-# FIT FOR A PARTICULAR PURPOSE.  
+# FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
 #
 
@@ -43,6 +43,7 @@ LIBHANDLER_INCLUDE_DIRS  := -I${DEPS_DIR}/libhandler/inc
 CPPCORO_INCLUDE_DIRS     := -I${DEPS_DIR}/cppcoro/include
 LIBCO_INCLUDE_DIRS       := -I${DEPS_DIR}/libco
 CPP-EFFECTS_INCLUDE_DIRS := -I${DEPS_DIR}/cpp-effects/include
+PICOHTTP_INCLUDE_DIRS	 := -I${DEPS_DIR}/picohttpparser
 
 CFLAGS            := $(FLAGS) -std=gnu11
 CFLAGS_LIBSEFF    := $(CFLAGS) $(LIBSEFF_INCLUDE_DIRS) -fsplit-stack
@@ -76,6 +77,7 @@ clean_deps:
 	$(MAKE) -C ${DEPS_DIR}/libco clean
 	rm -rf ${DEPS_DIR}/cppcoro/build
 	$(MAKE) -C ${DEPS_DIR}/libhandler clean
+	rm -rf ${DEPS_DIR}/picohttpparser/build
 
 ${DEPS_DIR}/cppcoro/tools/cake/src/run.py:
 	git submodule update --init --recursive
@@ -108,3 +110,14 @@ $(LIBHANDLER_LIB):
 	cd ${DEPS_DIR}/libhandler; ./configure --cc=${CC} --cxx=${CXX}
 	$(MAKE) VARIANT=${BUILD} -C ${DEPS_DIR}/libhandler depend
 	$(MAKE) VARIANT=${BUILD} -C ${DEPS_DIR}/libhandler
+
+PICOHTTP_LIB := ${DEPS_DIR}/picohttpparser/build/picohttpparser.a
+
+${DEPS_DIR}/picohttpparser/build:
+	mkdir -p $@
+
+${DEPS_DIR}/picohttpparser/build/picohttpparser.o: ${DEPS_DIR}/picohttpparser/picohttpparser.c ${DEPS_DIR}/picohttpparser/picohttpparser.h | ${DEPS_DIR}/picohttpparser/build
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+$(PICOHTTP_LIB): ${DEPS_DIR}/picohttpparser/build/picohttpparser.o | ${DEPS_DIR}/picohttpparser/build
+	llvm-ar-12 -rcs $@ $<
