@@ -97,14 +97,10 @@ bool scheduler_init(scheduler_t *self, size_t n_threads, size_t max_task_queue_s
     return true;
 }
 
-// #define MAX_TASKS 200000
-// _Thread_local size_t next_task = 0;
-// _Thread_local _task_t tasks[MAX_TASKS];
 void scheduler_schedule(scheduler_t *scheduler, seff_start_fun_t fn, void *arg, int64_t thread_id) {
     seff_coroutine_t *k = seff_coroutine_new(fn, arg);
+    // TODO this malloc is bad, but we need a growable pool, anything fixed is bad
     task_t task = malloc(sizeof(_task_t));
-    // task_t task = &tasks[next_task];
-    // next_task = (next_task + 1) % MAX_TASKS;
     task->watched_fd = -1;
     task->watched_events = 0;
     task->ready_events = 0;
@@ -198,6 +194,7 @@ void *worker_thread(void *args) {
             // Instead of 1 we should reserve spaces on the queue, epoll_wait
             // on the number of spaces reserved, and then add the tasks
             // that are ready, and release spaces not used
+            // It would be better to have a 1pnc queue for this
             int n_events = epoll_wait(self->epoll_fd, events, 1, 0);
             if (n_events < 0) {
                 threadsafe_printf("epoll error\n");

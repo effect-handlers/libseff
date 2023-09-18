@@ -56,6 +56,7 @@ MAKE_SYSCALL_WRAPPER(int, close, int);
 MAKE_SYSCALL_WRAPPER(void, free, void *);
 MAKE_SYSCALL_WRAPPER(int, strncmp, const char *, const char *, size_t);
 
+// phr_parse_request has too many arguments, this is just a workaround to make it easily wrappable
 typedef struct {
     const char *buf_start;
     size_t len;
@@ -90,6 +91,7 @@ void *connection_fun(seff_coroutine_t *self, void *_arg) {
     char response_buffer[BUF_SIZE];
 
     while (1) {
+        // While every new request comes, and the client doesn't close the connection
         const char *method;
         size_t method_len;
         const char *path;
@@ -114,6 +116,7 @@ void *connection_fun(seff_coroutine_t *self, void *_arg) {
         args.last_len = prevbuflen;
 
         while (1) {
+            // While the request hasn't been received completely
             int n_read = await_recv(conn_fd, msg_buffer + buflen, BUF_SIZE - buflen);
             if (n_read == 0) {
                 conn_log("Connection closed by client\n");
@@ -163,8 +166,7 @@ void *connection_fun(seff_coroutine_t *self, void *_arg) {
                     conn_log("Couldn't build a response\n");
                 }
             } else if (strncmp_syscall_wrapper("/prof", path, path_len) == 0) {
-                // TODO actually send these values as the reply
-                // These could be logging effects of the server?
+                // TODO actually send the prof values as the reply
                 int ret = build_response_syscall_wrapper(
                     response_buffer, BUF_SIZE, "HTTP/1.1 200 OK", "text/plain", NULL, 0);
                 if (ret >= 0) {
@@ -200,13 +202,13 @@ void *listener_fun(seff_coroutine_t *self, void *_arg) {
     int socket_fd = listen_tcp_socket(args->ip, args->port, true, true, true, 1024);
     if (socket_fd == -1) {
         printf("Cannot listen on %s:%s\n", args->ip, args->port);
-        return -1;
+        return (void *)-1;
     }
     threadsafe_printf("Open socket %d listening on %s:%s\n", socket_fd, args->ip, args->port);
 
     deb_log("Listening for connections\n");
 
-    while (true) {
+    while (1) {
         int connection_fd = await_accept4(socket_fd);
         if (connection_fd == -1) {
             deb_log("Error while listening for connection -- did the "
@@ -221,10 +223,12 @@ void *listener_fun(seff_coroutine_t *self, void *_arg) {
 
     return NULL;
 }
+
+// This is an over estimate, but a proper scheduler should probably have a growable queue
 #define TASK_QUEUE_SIZE 10000
 
 void print_usage(char *self) {
-    printf("Usage: %s [--port P] [--reverse]\n", self);
+    printf("Usage: %s [--port P]\n", self);
     exit(-1);
 }
 
@@ -257,6 +261,9 @@ int main(int argc, char *argv[]) {
     l_args.ip = ip;
     l_args.port = port;
     for (int i = 0; i < n_threads; ++i) {
+        // schedule a listener function to each thread
+        // TODO these listeners can be moved around, should we be able to fix them to a particular
+        // thread?
         scheduler_schedule(&scheduler, listener_fun, (void *)&l_args, i);
     }
 

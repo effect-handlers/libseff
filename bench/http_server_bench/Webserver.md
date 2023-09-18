@@ -1,10 +1,12 @@
 # Building a webserver with libseff
-
+> _Just some notes and resources._
+> _Not organized_
 ## Random concepts
 
 ### Async IO
 - epoll
 - io_uring
+- poll, I guess
 
 ### Event loop
 _Do we want one?_
@@ -35,7 +37,7 @@ _Do we want one?_
 - Effects can be used as just a screen over an already implemented event loop, prob not a good idea
 
 
-### wrk command
+### commands
 ./bench/wrk2/wrk -t 24 -d10s -L -R 100000 -c 1000 http://localhost:8082
 ./bench/wrk2/wrk -t 24 -d10s -L -R 100000 -c 1000 -s ./bench/http_server_bench/utils/check.lua http://localhost:8082
 

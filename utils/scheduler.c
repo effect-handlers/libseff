@@ -96,7 +96,7 @@ void scheduler_schedule_task(scheduler_t *scheduler, task_t task, int thread_id)
     atomic_fetch_add_explicit(&scheduler->remaining_tasks, 1, memory_order_relaxed);
     int64_t target_thread = scheduler->threads[thread_id].next_fork_thread;
 #ifdef SCHEDULER_POLICY_WORK_SPILLING
-    scheduler->threads[thread_id].next_fork_thread = (target_thread + 1) % (scheduler->n_threads);
+    scheduler->threads[thread_id].next_fork_thread = (target_thread + 1) % scheduler->n_threads;
 #endif
     queue_t *thread_queue = &scheduler->threads[target_thread].task_queue;
     while (!queue_enqueue(thread_queue, task)) {
@@ -213,7 +213,7 @@ void *worker_thread(void *args) {
     return NULL;
 }
 void scheduler_start(scheduler_t *scheduler) {
-    for (size_t i = 1; i < scheduler->n_threads; i++) {
+    for (size_t i = 0; i < scheduler->n_threads; i++) {
         pthread_create(&scheduler->threads[i].thread, NULL, worker_thread, &scheduler->threads[i]);
     }
 }
@@ -221,8 +221,7 @@ bool scheduler_finished(scheduler_t *scheduler) {
     return atomic_load(&scheduler->remaining_tasks) == 0;
 }
 void scheduler_join(scheduler_t *scheduler) {
-    worker_thread(&scheduler->threads[0]);
-    for (size_t i = 1; i < scheduler->n_threads; i++) {
+    for (size_t i = 0; i < scheduler->n_threads; i++) {
         void *ret;
         pthread_join(scheduler->threads[i].thread, &ret);
     }

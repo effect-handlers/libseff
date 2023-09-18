@@ -1,3 +1,18 @@
+/*
+ *
+ * Copyright (c) 2023 Huawei Technologies Co., Ltd.
+ *
+ * libseff is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ * 	    http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
+ * FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ *
+ */
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -13,7 +28,7 @@
 #include "scheduler.h"
 
 #ifndef NDEBUG
-#define deb_log(msg, ...) printf(msg, ##__VA_ARGS__)
+#define deb_log(msg, ...) threadsafe_printf(msg, ##__VA_ARGS__)
 #else
 #define deb_log(msg, ...)
 #endif
@@ -31,9 +46,9 @@ MAKE_SYSCALL_WRAPPER(int, send, int, const void *, size_t, int);
 
 int listen_tcp_socket(const char *ip, const char *port, bool non_blocking, bool reuse_address,
     bool reuse_port, int listen_queue_size) {
-    deb_log("Getting listening TCP socket on ip: %s, port: %s\n", ip, port);
-    deb_log("  non blocking: %d, reuse address: %d, reuse port: %d\n", non_blocking, reuse_address,
-        reuse_port);
+    deb_log("Getting listening TCP socket on ip: %s, port: %s\n"
+            "  non blocking: %d, reuse address: %d, reuse port: %d\n",
+        ip, port, non_blocking, reuse_address, reuse_port);
 
     int listener = -1; // Listening socket descriptor
     int ret_val;
@@ -102,8 +117,7 @@ int listen_tcp_socket(const char *ip, const char *port, bool non_blocking, bool 
 int await_accept4(int socket_fd) {
     // it is assumed that the socket is non blocking
 #ifndef NDEBUG
-    // assert that the socket is non blocking
-    // assert()
+    // TODO assert that the socket is non blocking
 #endif
     int n_read = accept4_syscall_wrapper(socket_fd, NULL, NULL, SOCK_NONBLOCK);
     if (n_read >= 0) {
