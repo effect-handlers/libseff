@@ -40,6 +40,7 @@ void tl_queue_push(tl_queue_t *self, queue_elt_t elt) {
 
     if (tail - head > arr->size - 1) {
         circular_array_t *new_array = circular_array_resize(arr, tail, head);
+        free(self->array);
         self->array = new_array;
         arr = new_array;
     }
