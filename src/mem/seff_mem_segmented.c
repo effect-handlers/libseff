@@ -35,8 +35,6 @@ __asm__("current_stack_top:"
 seff_stack_segment_t *init_segment(size_t frame_size) {
     size_t overhead = sizeof(seff_stack_segment_t);
     seff_stack_segment_t *segment = malloc(frame_size + overhead);
-    void *rsp;
-    __asm__("movq %%rsp,%0" : "=r"(rsp));
 
     if (!segment) {
         exit(-1);
