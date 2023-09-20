@@ -42,12 +42,12 @@ E seff_coroutine_t *seff_coroutine_new_sized(seff_start_fun_t *, void *, size_t)
 E void seff_coroutine_delete(seff_coroutine_t *);
 
 E __attribute__((no_split_stack)) void *seff_yield(seff_coroutine_t *self, void *arg);
-E __attribute__((no_split_stack)) seff_coroutine_t *seff_locate_handler(effect_id effect);
+E seff_coroutine_t *seff_locate_handler(effect_id effect);
 
 E seff_coroutine_t *seff_current_coroutine(void);
 // For debugging only. Do not use.
 #ifdef STACK_POLICY_SEGMENTED
-E void *seff_current_stack_top(void);
+E __attribute__((no_split_stack)) void *seff_current_stack_top(void);
 #endif
 
 typedef void *(default_handler_t)(void *);
@@ -55,7 +55,7 @@ E default_handler_t *seff_set_default_handler(effect_id effect, default_handler_
 E default_handler_t *seff_get_default_handler(effect_id effect);
 
 // Performance difference is massive between seff_perform being inlined or not
-static inline __attribute__((no_split_stack)) void *seff_perform(effect_id eff_id, void *payload) {
+static inline void *seff_perform(effect_id eff_id, void *payload) {
     seff_coroutine_t *handler = seff_locate_handler(eff_id);
     if (handler) {
         seff_eff_t e;
@@ -72,7 +72,7 @@ static inline __attribute__((no_split_stack)) void *seff_perform(effect_id eff_i
     // here, use a syscall wrapper
 }
 
-E __attribute__((noreturn, no_split_stack)) void seff_throw(effect_id effect, void *payload);
+E __attribute__((noreturn)) void seff_throw(effect_id effect, void *payload);
 E __attribute__((noreturn, no_split_stack)) void seff_return(seff_coroutine_t *k, void *result);
 E __attribute__((noreturn, no_split_stack)) void coroutine_prelude(void);
 
