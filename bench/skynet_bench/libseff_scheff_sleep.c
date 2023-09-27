@@ -8,8 +8,7 @@
 #include "atomic.h"
 #include "scheff.h"
 #include "seff.h"
-
-#define BRANCHING_FACTOR 10
+#include "skynet_common.h"
 
 #define EMPTY_PROMISE NULL
 #define FULFILLED (void *)0xffffffffffffffff
@@ -63,9 +62,10 @@ typedef struct {
     skynet_promise_t promise;
     int64_t num;
 } skynet_args_t;
+
 // First node id of the last layer
 int64_t last_layer = 1;
-int64_t total = 0;
+
 void *skynet(seff_coroutine_t *self, void *_arg) {
     skynet_args_t *args = (skynet_args_t *)_arg;
     skynet_promise_t *promise = &args->promise;
@@ -93,39 +93,7 @@ void *skynet(seff_coroutine_t *self, void *_arg) {
     return NULL;
 }
 
-void print_usage(char *self) {
-    printf("Usage: %s [--depth M] [--threads N]\n", self);
-    exit(-1);
-}
-
-int main(int argc, char **argv) {
-    int n_workers = 8;
-    int depth = 7;
-
-    for (size_t i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--threads") == 0) {
-            if (i + 1 >= argc) {
-                print_usage(argv[0]);
-            }
-            int res = sscanf(argv[i + 1], "%d", &n_workers);
-            if (res <= 0 || n_workers <= 0) {
-                print_usage(argv[0]);
-            }
-            i++;
-        } else if (strcmp(argv[i], "--depth") == 0) {
-            if (i + 1 >= argc) {
-                print_usage(argv[0]);
-            }
-            int res = sscanf(argv[i + 1], "%d", &depth);
-            if (res <= 0 || depth <= 0) {
-                print_usage(argv[0]);
-            }
-            i++;
-        } else {
-            print_usage(argv[0]);
-        }
-    }
-
+int64_t bench(int n_workers, int depth) {
     for (int i = 1; i < depth; i++) {
         last_layer *= BRANCHING_FACTOR;
     }
@@ -140,11 +108,11 @@ int main(int argc, char **argv) {
 
     scheff_run(&scheduler);
 
-    printf("Total: %ld\n", root_args.promise.result);
-
 #ifndef NDEBUG
     scheff_print_stats(&scheduler);
 #endif
 
-    return 0;
+    return root_args.promise.result;
 }
+
+int main(int argc, char **argv) { return runner(argc, argv, bench, __FILE__); }

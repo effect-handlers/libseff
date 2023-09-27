@@ -9,11 +9,16 @@
 
 #include "atomic.h"
 #include "cl_queue.h"
-
-#undef NDEBUG
+#include "skynet_common.h"
 
 #define STACK_SIZE 512
 #define INITIAL_QUEUE_LOG_SIZE 3
+
+#ifndef NDEBUG
+#define debug(block) block
+#else
+#define debug(block)
+#endif
 
 typedef enum { READY, WAITING } future_state_t;
 
@@ -107,14 +112,14 @@ void async_schedule(
     task->promise = promise;
     self->remaining_tasks++;
 
-    self->workers[0].self_task_push++;
+    debug(self->workers[0].self_task_push++);
     cl_queue_push(&self->workers[0].task_queue, task);
 }
 
 task_t *try_get_task(worker_thread_t *self) {
     task_t *own_task = cl_queue_pop(&self->task_queue);
     if (own_task != EMPTY && own_task != ABORT) {
-        self->self_task_pop++;
+        debug(self->self_task_pop++);
         return own_task;
     }
 #ifndef NDEBUG
@@ -133,7 +138,7 @@ task_t *try_get_task(worker_thread_t *self) {
         task_t *stolen_task =
             cl_queue_steal(&scheduler->workers[(worker_id + i) % n_workers].task_queue);
         if (stolen_task != EMPTY && stolen_task != ABORT) {
-            self->stolen_task_ok++;
+            debug(self->stolen_task_ok++);
             return stolen_task;
         }
 #ifndef NDEBUG
@@ -176,7 +181,7 @@ void *worker_thread(void *_self) {
         seff_eff_t *request = (seff_eff_t *)seff_handle(
             current_task->coroutine, coroutine_arg, HANDLES(async) | HANDLES(await));
         if (current_task->coroutine->state == FINISHED) {
-            self->return_requests++;
+            debug(self->return_requests++);
             future_t *promise = current_task->promise;
 
             /* Spin until the future can be acquired */
@@ -186,7 +191,7 @@ void *worker_thread(void *_self) {
 
                 task_t *waiter = promise->waiter;
                 if (waiter != NULL) {
-                    self->self_task_push++;
+                    debug(self->self_task_push++);
                     cl_queue_push(&self->task_queue, waiter);
                 }
             });
@@ -204,12 +209,12 @@ void *worker_thread(void *_self) {
         } else {
             switch (request->id) {
                 CASE_EFFECT(request, await, {
-                    self->await_requests++;
+                    debug(self->await_requests++);
                     future_t *awaited = payload.fut;
                     SPINLOCK(&awaited->blocked, {
                         current_task->waiting = payload.fut;
                         if (payload.fut->state == READY) {
-                            self->self_task_push++;
+                            debug(self->self_task_push++);
                             cl_queue_push(&self->task_queue, current_task);
                         } else {
                             payload.fut->waiter = current_task;
@@ -218,7 +223,7 @@ void *worker_thread(void *_self) {
                     break;
                 });
                 CASE_EFFECT(request, async, {
-                    self->async_requests++;
+                    debug(self->async_requests++);
                     atomic_fetch_add_explicit(remaining_tasks, 1, memory_order_relaxed);
 
                     payload.promise->state = WAITING;
@@ -232,7 +237,7 @@ void *worker_thread(void *_self) {
                     new_task->promise = payload.promise;
                     new_task->waiting = NULL;
 
-                    self->self_task_push += 2;
+                    debug(self->self_task_push += 2);
                     cl_queue_push(&self->task_queue, new_task);
                     cl_queue_push(&self->task_queue, current_task);
                     break;
@@ -270,7 +275,7 @@ void *skynet(seff_coroutine_t *self, void *_arg) {
     } else {
         int64_t sum = 0;
 
-        num *= 10;
+        num *= BRANCHING_FACTOR;
         future_t futures[10];
         for (size_t i = 0; i < 10; i++) {
             PERFORM(async, skynet, (void *)(num + i), &futures[i]);
@@ -283,39 +288,7 @@ void *skynet(seff_coroutine_t *self, void *_arg) {
     }
 }
 
-void print_usage(char *self) {
-    printf("Usage: %s [--depth M] [--threads N]\n", self);
-    exit(-1);
-}
-
-int main(int argc, char **argv) {
-    int n_workers = 8;
-    int depth = 7;
-
-    for (size_t i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--threads") == 0) {
-            if (i + 1 >= argc) {
-                print_usage(argv[0]);
-            }
-            int res = sscanf(argv[i + 1], "%d", &n_workers);
-            if (res <= 0 || n_workers <= 0) {
-                print_usage(argv[0]);
-            }
-            i++;
-        } else if (strcmp(argv[i], "--depth") == 0) {
-            if (i + 1 >= argc) {
-                print_usage(argv[0]);
-            }
-            int res = sscanf(argv[i + 1], "%d", &depth);
-            if (res <= 0 || depth <= 0) {
-                print_usage(argv[0]);
-            }
-            i++;
-        } else {
-            print_usage(argv[0]);
-        }
-    }
-
+int64_t bench(int n_workers, int depth) {
     for (int i = 1; i < depth; i++) {
         last_layer *= 10;
     }
@@ -327,8 +300,6 @@ int main(int argc, char **argv) {
     async_schedule(&scheduler, 0, skynet, (void *)(uintptr_t)1, &final_result);
 
     async_scheduler_run(&scheduler);
-
-    printf("Total: %ld\n", final_result.result);
 
 #ifndef NDEBUG
     int64_t total_contention = 0;
@@ -358,5 +329,8 @@ int main(int argc, char **argv) {
     printf("Relative contention %lf\n", ((double)total_contention) / n_workers);
     printf("Max concurrent tasks %ld\n", scheduler.max_tasks);
 #endif
-    return 0;
+
+    return final_result.result;
 }
+
+int main(int argc, char **argv) { return runner(argc, argv, bench, __FILE__); }
