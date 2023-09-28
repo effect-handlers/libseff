@@ -12,6 +12,8 @@
  * See the Mulan PSL v2 for more details.
  *
  */
+#ifndef SCHEFF_H
+#define SCHEFF_H
 
 #include <assert.h>
 #include <pthread.h>
@@ -72,3 +74,5 @@ typedef bool(scheff_wakeup_manager_t)(struct scheff_waker_t *waker, void *arg);
 void scheff_sleep(scheff_wakeup_manager_t *must_sleep, void *arg);
 void scheff_wake(struct scheff_waker_t *waker, bool resume);
 void scheff_wake_all(size_t n_wakers, struct scheff_waker_t **waker, bool resume);
+
+#endif // SCHEFF_H

@@ -16,10 +16,12 @@
 #ifndef SEFF_ACTORS_H
 #define SEFF_ACTORS_H
 
-#include "seff.h"
 #include <assert.h>
 #include <stdatomic.h>
 #include <stdbool.h>
+
+#include "scheff.h"
+#include "seff.h"
 
 #define DEFAULT_MAILBOX_CAPACITY 128
 struct actor_t;
@@ -43,5 +45,7 @@ void *actor_remove_msg(actor_t *actor);
 void *actor_recv(actor_t *act);
 void actor_send(actor_t *target, void *msg);
 actor_t *fork_actor(actor_fn_t *behavior);
+
+void actor_start(seff_start_fun_t main_actor, void *arg, size_t threads, bool print_sched_stats);
 
 #endif

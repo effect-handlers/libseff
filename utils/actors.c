@@ -14,7 +14,6 @@
  */
 
 #include "actors.h"
-#include "scheduler.h"
 
 bool actor_init(actor_t *actor, actor_fn_t *behavior, size_t mailbox_capacity) {
     actor->mailbox = calloc(mailbox_capacity, sizeof(void *));
@@ -34,6 +33,10 @@ void actor_destroy(actor_t *actor) {
     free(actor->mailbox);
     actor->mailbox = NULL;
 }
+bool actor_has_space(actor_t *actor) {
+    return atomic_load(&actor->reserved_size) < actor->mailbox_capacity;
+}
+
 bool actor_insert_msg(actor_t *actor, void *msg) {
     assert(msg);
 
@@ -76,7 +79,7 @@ void *actor_remove_msg(actor_t *actor) {
 void *actor_recv(actor_t *act) {
     void *msg = actor_remove_msg(act);
     while (!msg) {
-        PERFORM(yield);
+        scheff_poll(actor_has_msg, (void *)act);
         msg = actor_remove_msg(act);
     }
     return msg;
@@ -84,7 +87,7 @@ void *actor_recv(actor_t *act) {
 void actor_send(actor_t *target, void *msg) {
     while (!actor_insert_msg(target, msg)) {
         // Wait until there is space in the target's mailbox
-        PERFORM(yield);
+        scheff_poll(actor_has_space, (void *)target);
     }
     return;
 }
@@ -99,7 +102,25 @@ actor_t *fork_actor(actor_fn_t *behavior) {
     actor_t *actor = malloc(sizeof(actor_t));
     actor_init(actor, behavior, DEFAULT_MAILBOX_CAPACITY);
 
-    PERFORM(fork, actor_thread, actor);
+    scheff_fork(actor_thread, (void *)actor);
 
     return actor;
+}
+
+void actor_start(seff_start_fun_t main_actor, void *arg, size_t threads, bool print_sched_stats) {
+    scheff_t scheduler;
+    scheff_init(&scheduler, threads);
+
+    if (!scheff_schedule(&scheduler, main_actor, arg)) {
+        printf("Something went wrong when scheduling the main task!\n");
+        exit(1);
+    }
+
+    scheff_run(&scheduler);
+
+#ifndef NDEBUG
+    if (print_sched_stats) {
+        scheff_print_stats(&scheduler);
+    }
+#endif
 }

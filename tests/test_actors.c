@@ -1,17 +1,26 @@
 #include "actors.h"
-#define SCHEDULER_POLICY_WORK_SPILLING
-#include "scheduler.c"
+#include "seff.h"
 
 typedef struct {
     actor_t *sender;
     int64_t number;
 } pong_msg;
 
+#define GUARD(mutex, block)                \
+    {                                      \
+        pthread_mutex_lock(mutex);         \
+        block pthread_mutex_unlock(mutex); \
+    }
+static pthread_mutex_t puts_mutex;
+
+#define threadsafe_puts(str) GUARD(&puts_mutex, { puts(str); });
+#define threadsafe_printf(...) GUARD(&puts_mutex, { printf(__VA_ARGS__); })
+
 void *pong_fn(seff_coroutine_t *k, actor_t *self) {
     threadsafe_puts("[pong] initialized");
 
     while (true) {
-        pong_msg *msg = actor_recv(self);;
+        pong_msg *msg = actor_recv(self);
         if ((int64_t)msg == -1) {
             threadsafe_puts("[pong] received kill request");
             break;
@@ -62,17 +71,8 @@ void *actors_main(seff_coroutine_t *self, void *arg) {
 }
 
 #define THREADS 4
-#define TASK_QUEUE_SIZE 128
 
 int main(void) {
-    scheduler_t s;
-    scheduler_init(&s, THREADS, TASK_QUEUE_SIZE);
-
-    scheduler_schedule(&s, actors_main, NULL, 0);
-    scheduler_start(&s);
-
-    threadsafe_puts("main idling");
-
-    scheduler_join(&s);
-    scheduler_destroy(&s);
+    actor_start(actors_main, NULL, THREADS, true);
+    return 0;
 }
