@@ -86,6 +86,15 @@ output/net.o: utils/net.c utils/net.h | output/lib
 output/http_response.o: utils/http_response.c utils/http_response.h | output/lib
 	$(CC) $(CFLAGS) -o $@ -c $<
 
+output/tk_queue.o: utils/tk_queue.h utils/tk_queue.c | output/lib
+	$(CC) $(CFLAGS) -I./utils -o output/tk_queue.o -c utils/tk_queue.c
+
+output/tl_queue.o: utils/tl_queue.h utils/tl_queue.c | output/lib
+	$(CC) $(CFLAGS) -I./utils -o output/tl_queue.o -c utils/tl_queue.c
+
+output/scheff.o: scheduler/scheff.h scheduler/scheff.c | output/lib
+	$(CC) $(CFLAGS) -I./src -I./utils -o output/scheff.o -c scheduler/scheff.c
+
 output/tests/%: tests/%.c output/lib/libutils.a output/lib/libseff.a | output/tests
 	$(CC) $(CFLAGS) -I./src -I./utils -o $@.o -c $<
 	$(CC) $(CFLAGS) -I./src -I./utils -o $@ $@.o output/lib/libseff.a output/lib/libutils.a $(LDFLAGS)
@@ -103,6 +112,9 @@ bench: output/lib/libseff.a output/lib/libutils.a
 	for bench_dir in bench/*_bench/ ; do \
 		$(MAKE) BUILD=${BUILD} -C $${bench_dir} all ; \
 	done
+
+bench/%: output/lib/libseff.a output/lib/libutils.a
+	$(MAKE) BUILD=${BUILD} -C $@ all
 
 compile_commands.json:
 	$(MAKE) --always-make --dry-run \
@@ -134,5 +146,5 @@ clean:
 output/lib/libseff.a: output/seff_mem.o output/seff_mem_asm.o output/seff.o output/seff_asm.o | output/lib
 	ar -rcs output/lib/libseff.a output/seff_mem.o output/seff_mem_asm.o output/seff.o output/seff_asm.o
 
-output/lib/libutils.a: output/actors.o output/cl_queue.o output/net.o output/http_response.o | output/lib
+output/lib/libutils.a: output/actors.o output/cl_queue.o output/tk_queue.o output/tl_queue.o output/scheff.o output/net.o output/http_response.o | output/lib
 	ar -rcs $@ $^

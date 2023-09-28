@@ -13,8 +13,8 @@
  *
  */
 
-#ifndef SEFF_CL_QUEUE_H
-#define SEFF_CL_QUEUE_H
+#ifndef SEFF_TK_QUEUE_H
+#define SEFF_TK_QUEUE_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -22,24 +22,25 @@
 struct task_t;
 typedef struct task_t *queue_elt_t;
 
-typedef struct cl_queue_t {
-    _Atomic(int64_t) top;
-    _Atomic(int64_t) bottom;
+typedef struct {
+    _Atomic(int64_t) head;
+    _Atomic(int64_t) tail;
+    queue_elt_t buffer;
     _Atomic(struct circular_array_t *) array;
-} cl_queue_t;
+} tk_queue_t;
 
-void cl_queue_init(cl_queue_t *queue, size_t log_size);
+void tk_queue_init(tk_queue_t *queue, size_t log_size);
 
 #define EMPTY ((queue_elt_t)NULL)
 #define ABORT ((queue_elt_t)(~(uintptr_t)NULL))
 
 // Should only be called by the unique producer
-void cl_queue_push(cl_queue_t *queue, queue_elt_t task);
+void tk_queue_push(tk_queue_t *queue, queue_elt_t task);
 // Should only be called by the unique producer
-void cl_queue_priority_push(cl_queue_t *queue, queue_elt_t task);
+void tk_queue_priority_push(tk_queue_t *queue, queue_elt_t task);
 // Should only be called by the unique producer
-queue_elt_t cl_queue_pop(cl_queue_t *queue);
+queue_elt_t tk_queue_pop(tk_queue_t *queue);
 // Can be call by anyone
-queue_elt_t cl_queue_steal(cl_queue_t *queue);
+queue_elt_t tk_queue_steal(tk_queue_t *queue);
 
 #endif

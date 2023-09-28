@@ -8,8 +8,8 @@
 #include <unistd.h>
 
 #include "atomic.h"
-#include "cl_queue.h"
 #include "skynet_common.h"
+#include "tk_queue.h"
 
 #define STACK_SIZE 512
 #define INITIAL_QUEUE_LOG_SIZE 3
@@ -31,6 +31,16 @@ typedef struct {
     struct task_t *waiter;
 } future_t;
 
+bool try_lock(future_t *fut) {
+    bool expected = false;
+    return atomic_compare_exchange_weak_explicit(
+        &fut->blocked, &expected, true, memory_order_relaxed, memory_order_relaxed);
+}
+
+bool unlock(future_t *fut) {
+    return atomic_exchange_explicit(&fut->blocked, false, memory_order_relaxed);
+}
+
 typedef struct task_t {
     seff_coroutine_t *coroutine;
     future_t *waiting;
@@ -49,7 +59,7 @@ typedef struct worker_thread_t {
     struct async_scheduler_t *scheduler;
     pthread_t thread;
     size_t worker_id;
-    cl_queue_t task_queue;
+    tk_queue_t task_queue;
 
 #ifndef NDEBUG
     int64_t self_task_push;
@@ -98,7 +108,7 @@ bool async_scheduler_init(async_scheduler_t *self, size_t n_workers) {
         self->workers[i].stolen_task_empty = 0;
         self->workers[i].spinlock_fails = 0;
 #endif
-        cl_queue_init(&self->workers[i].task_queue, INITIAL_QUEUE_LOG_SIZE);
+        tk_queue_init(&self->workers[i].task_queue, INITIAL_QUEUE_LOG_SIZE);
     }
     return true;
 }
@@ -113,12 +123,12 @@ void async_schedule(
     self->remaining_tasks++;
 
     debug(self->workers[0].self_task_push++);
-    cl_queue_push(&self->workers[0].task_queue, task);
+    tk_queue_push(&self->workers[0].task_queue, task);
 }
 
 task_t *try_get_task(worker_thread_t *self) {
-    task_t *own_task = cl_queue_pop(&self->task_queue);
-    if (own_task != EMPTY && own_task != ABORT) {
+    task_t *own_task = tk_queue_pop(&self->task_queue);
+    if (own_task != EMPTY) {
         debug(self->self_task_pop++);
         return own_task;
     }
@@ -136,8 +146,8 @@ task_t *try_get_task(worker_thread_t *self) {
 
     for (size_t i = 1; i < self->scheduler->n_workers; i++) {
         task_t *stolen_task =
-            cl_queue_steal(&scheduler->workers[(worker_id + i) % n_workers].task_queue);
-        if (stolen_task != EMPTY && stolen_task != ABORT) {
+            tk_queue_steal(&scheduler->workers[(worker_id + i) % n_workers].task_queue);
+        if (stolen_task != EMPTY) {
             debug(self->stolen_task_ok++);
             return stolen_task;
         }
@@ -192,7 +202,7 @@ void *worker_thread(void *_self) {
                 task_t *waiter = promise->waiter;
                 if (waiter != NULL) {
                     debug(self->self_task_push++);
-                    cl_queue_push(&self->task_queue, waiter);
+                    tk_queue_priority_push(&self->task_queue, waiter);
                 }
             });
 
@@ -215,7 +225,7 @@ void *worker_thread(void *_self) {
                         current_task->waiting = payload.fut;
                         if (payload.fut->state == READY) {
                             debug(self->self_task_push++);
-                            cl_queue_push(&self->task_queue, current_task);
+                            tk_queue_priority_push(&self->task_queue, current_task);
                         } else {
                             payload.fut->waiter = current_task;
                         }
@@ -238,8 +248,8 @@ void *worker_thread(void *_self) {
                     new_task->waiting = NULL;
 
                     debug(self->self_task_push += 2);
-                    cl_queue_push(&self->task_queue, new_task);
-                    cl_queue_push(&self->task_queue, current_task);
+                    tk_queue_priority_push(&self->task_queue, new_task);
+                    tk_queue_push(&self->task_queue, current_task);
                     break;
                 });
             default:
@@ -275,7 +285,7 @@ void *skynet(seff_coroutine_t *self, void *_arg) {
     } else {
         int64_t sum = 0;
 
-        num *= BRANCHING_FACTOR;
+        num *= 10;
         future_t futures[10];
         for (size_t i = 0; i < 10; i++) {
             PERFORM(async, skynet, (void *)(num + i), &futures[i]);

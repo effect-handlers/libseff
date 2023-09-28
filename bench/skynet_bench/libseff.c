@@ -1,8 +1,9 @@
-#include "seff.h"
-
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "seff.h"
+#include "skynet_common.h"
 
 DEFINE_EFFECT(yield_int, 1, void, { int64_t value; });
 
@@ -44,29 +45,9 @@ void *skynet(seff_coroutine_t *self, void *_arg) {
     return NULL;
 }
 
-int64_t total;
-
-void print_usage(char *self) {
-    printf("Usage: %s [--depth M]\n", self);
-    exit(-1);
-}
-
-int main(int argc, char **argv) {
-    int depth = 7;
-
-    for (size_t i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--depth") == 0) {
-            if (i + 1 >= argc) {
-                print_usage(argv[0]);
-            }
-            int res = sscanf(argv[i + 1], "%d", &depth);
-            if (res <= 0 || depth <= 0) {
-                print_usage(argv[0]);
-            }
-            i++;
-        } else {
-            print_usage(argv[0]);
-        }
+int64_t bench(int n_workers, int depth) {
+    if (n_workers > 1) {
+        printf("Warning: libseff does not use workers, n_workers is ignored!\n");
     }
 
     for (int i = 1; i < depth; i++) {
@@ -75,7 +56,7 @@ int main(int argc, char **argv) {
 
     seff_coroutine_t *root = seff_coroutine_new_sized(skynet, (void *)1, STACK_SIZE);
 
-    total = 0;
+    int64_t total = 0;
 
     seff_eff_t *eff = seff_handle(root, NULL, HANDLES(yield_int));
     while (root->state != FINISHED) {
@@ -89,5 +70,8 @@ int main(int argc, char **argv) {
         }
         eff = seff_handle(root, NULL, HANDLES(yield_int));
     }
-    printf("Total: %ld\n", total);
+
+    return total;
 }
+
+int main(int argc, char **argv) { return runner(argc, argv, bench, __FILE__); }

@@ -14,53 +14,21 @@
  */
 
 #include "cl_queue.h"
+#include "atomic.h"
+#include "circular_array.h"
 
 #include <assert.h>
 #include <stdatomic.h>
 #include <stddef.h>
 #include <stdlib.h>
 
-#define RELAXED(op, ...) atomic_##op##_explicit(__VA_ARGS__, memory_order_relaxed)
-
-const int64_t LOG_INITIAL_SIZE = 3;
-const int64_t INITIAL_SIZE = 1 << LOG_INITIAL_SIZE;
-
-typedef struct circular_array_t {
-    int64_t size;
-    int64_t mask;
-    _Atomic(queue_elt_t) * buffer;
-} circular_array_t;
-
-circular_array_t *resize_array(circular_array_t *arr, int64_t bottom, int64_t top) {
-    circular_array_t *new_array = malloc(sizeof(circular_array_t));
-
-    int64_t new_size = arr->size << 1;
-    int64_t new_mask = new_size - 1;
-    _Atomic(queue_elt_t) *new_buffer = malloc(new_size * sizeof(queue_elt_t));
-
-    new_array->size = new_size;
-    new_array->mask = new_mask;
-    new_array->buffer = new_buffer;
-
-    _Atomic(queue_elt_t) *buffer = arr->buffer;
-    int64_t old_mask = arr->mask;
-    for (int64_t i = top; i < bottom; i++) {
-        RELAXED(store, &new_buffer[i & new_mask], RELAXED(load, &buffer[i & old_mask]));
-    }
-
-    return new_array;
-}
-
-void cl_queue_init(queue_t *self) {
+void cl_queue_init(cl_queue_t *self, size_t log_size) {
     self->bottom = 0;
     self->top = 0;
-    self->array = malloc(sizeof(circular_array_t));
-    self->array->size = INITIAL_SIZE;
-    self->array->mask = INITIAL_SIZE - 1;
-    self->array->buffer = malloc(INITIAL_SIZE * sizeof(queue_elt_t));
+    self->array = circular_array_new(log_size);
 }
 
-queue_elt_t queue_pop(queue_t *self) {
+queue_elt_t cl_queue_pop(cl_queue_t *self) {
     int64_t bottom = RELAXED(load, &self->bottom) - 1;
     circular_array_t *arr = RELAXED(load, &self->array);
     RELAXED(store, &self->bottom, bottom);
@@ -70,7 +38,7 @@ queue_elt_t queue_pop(queue_t *self) {
     queue_elt_t elt;
     if (top <= bottom) {
         /* Non-empty queue */
-        elt = RELAXED(load, &arr->buffer[bottom & arr->mask]);
+        elt = CA_GET(arr, bottom);
         if (top == bottom) {
             /* We just raced for the last element */
             if (!RELAXED(
@@ -87,25 +55,26 @@ queue_elt_t queue_pop(queue_t *self) {
     return elt;
 }
 
-void queue_push(queue_t *self, queue_elt_t elt) {
+void cl_queue_push(cl_queue_t *self, queue_elt_t elt) {
     int64_t bottom = RELAXED(load, &self->bottom);
     // Note this is *not* relaxed
     int64_t top = atomic_load_explicit(&self->top, memory_order_acquire);
     circular_array_t *arr = RELAXED(load, &self->array);
     if (bottom - top > arr->size - 1) {
         /* Queue is full! */
-        circular_array_t *new_array = resize_array(arr, bottom, top);
+        circular_array_t *new_array = circular_array_resize(arr, bottom, top);
         RELAXED(store, &self->array, new_array);
         /* TODO: we're leaking memory here */
         arr = new_array;
     }
-    RELAXED(store, &arr->buffer[bottom & arr->mask], elt);
-    // arr->buffer[bottom & arr->mask] = elt;
+    CA_SET(arr, bottom, elt);
     atomic_thread_fence(memory_order_release);
     RELAXED(store, &self->bottom, bottom + 1);
 }
 
-queue_elt_t queue_steal(queue_t *self) {
+void cl_queue_priority_push(cl_queue_t *self, queue_elt_t elt) { cl_queue_push(self, elt); }
+
+queue_elt_t cl_queue_steal(cl_queue_t *self) {
     int64_t top = atomic_load_explicit(&self->top, memory_order_acquire);
     atomic_thread_fence(memory_order_seq_cst);
     int64_t bottom = atomic_load_explicit(&self->bottom, memory_order_acquire);
@@ -113,7 +82,7 @@ queue_elt_t queue_steal(queue_t *self) {
     if (top < bottom) {
         /* Non-empty queue */
         circular_array_t *arr = atomic_load_explicit(&self->array, memory_order_consume);
-        elt = RELAXED(load, &arr->buffer[top & arr->mask]);
+        elt = CA_GET(arr, top);
         if (!RELAXED(compare_exchange_strong, &self->top, &top, top + 1, memory_order_seq_cst)) {
             /* Failed the race */
             return ABORT;
