@@ -25,6 +25,7 @@ circular_array_t *circular_array_new(size_t log_size) {
     atomic_store_explicit(&arr->buffer[idx & arr->mask], elt, memory_order_relaxed)
 
 circular_array_t *circular_array_resize(circular_array_t *arr, int64_t bottom, int64_t top) {
+    assert(__builtin_clz(arr->size) > 0);
     int64_t new_size = arr->size << 1;
     int64_t new_mask = new_size - 1;
 

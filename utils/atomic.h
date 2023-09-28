@@ -25,17 +25,20 @@
 #define ACQUIRE(op, ...) atomic_##op##_explicit(__VA_ARGS__, memory_order_acquire)
 #define RELEASE(op, ...) atomic_##op##_explicit(__VA_ARGS__, memory_order_release)
 
-inline void acquire(_Atomic(bool) * lock) {
-    bool was_locked = true;
-    while (was_locked = ACQUIRE(exchange, lock, true), was_locked) {
+#define ACQUIRE_LOCK(lock)                                           \
+    bool was_locked = true;                                          \
+    while (was_locked = ACQUIRE(exchange, lock, true), was_locked) { \
     }
-}
-inline void release(_Atomic(bool) * lock) { RELEASE(store, lock, false); }
 
-#define SPINLOCK(lock, block) \
-    {                         \
-        acquire(lock);        \
-        block release(lock);  \
+#define RELEASE_LOCK(lock) RELEASE(store, lock, false);
+
+#define SPINLOCK(lock, block)   \
+    {                           \
+        ACQUIRE_LOCK(lock)      \
+                                \
+        block                   \
+                                \
+            RELEASE_LOCK(lock); \
     }
 
 #endif

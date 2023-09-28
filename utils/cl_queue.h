@@ -33,9 +33,13 @@ void cl_queue_init(cl_queue_t *queue, size_t log_size);
 #define EMPTY ((queue_elt_t)NULL)
 #define ABORT ((queue_elt_t)(~(uintptr_t)NULL))
 
+// Should only be called by the unique producer
 void cl_queue_push(cl_queue_t *queue, queue_elt_t task);
+// Should only be called by the unique producer
 void cl_queue_priority_push(cl_queue_t *queue, queue_elt_t task);
+// Should only be called by the unique producer
 queue_elt_t cl_queue_pop(cl_queue_t *queue);
+// Can be call by anyone
 queue_elt_t cl_queue_steal(cl_queue_t *queue);
 
 #endif

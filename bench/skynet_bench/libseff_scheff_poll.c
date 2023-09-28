@@ -72,7 +72,10 @@ int64_t bench(int n_workers, int depth) {
     skynet_args_t root_args;
     root_args.result_promise.ready = false;
     root_args.num = 1;
-    scheff_schedule(&scheduler, skynet, &root_args);
+    if (!scheff_schedule(&scheduler, skynet, &root_args)) {
+        printf("Something went wrong when scheduling the main task!\n");
+        exit(1);
+    }
 
     scheff_run(&scheduler);
 

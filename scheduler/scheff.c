@@ -56,6 +56,7 @@ DEFINE_EFFECT(sleep, 2, void, {
     scheff_wakeup_manager_t *must_sleep;
     void *arg;
 });
+
 DEFINE_EFFECT(wake, 3, void, {
     size_t n_wakers;
     struct scheff_waker_t **wakers;
@@ -89,7 +90,7 @@ bool scheff_init(scheff_t *self, size_t n_workers) {
     self->remaining_tasks = 0;
     debug(self->max_tasks = 0);
     debug(self->task_counter = 0);
-    self->workers = malloc(n_workers * sizeof(worker_thread_t));
+    self->workers = aligned_alloc(64, n_workers * sizeof(worker_thread_t));
     if (!self->workers)
         return false;
     for (size_t i = 0; i < n_workers; i++) {
@@ -104,26 +105,31 @@ bool scheff_init(scheff_t *self, size_t n_workers) {
     return true;
 }
 
-void scheff_schedule(scheff_t *self, seff_start_fun_t fn, void *arg) {
+bool scheff_schedule(scheff_t *self, seff_start_fun_t fn, void *arg) {
     task_t *task = (task_t *)malloc(sizeof(task_t));
+    if (!task)
+        return false;
     seff_coroutine_init_sized(&task->coroutine, fn, arg, STACK_SIZE);
     task->poll_condition = NULL;
     task->poll_arg = NULL;
     debug(task->id = self->task_counter++);
     self->remaining_tasks++;
 
+    // TODO maybe load balancing and choose the worker?
     debug(self->workers[0].self_task_push++);
     QUEUE(push)(&self->workers[0].task_queue, task);
+    return true;
 }
 
 task_t *scheff_try_get_task(worker_thread_t *self) {
     task_t *own_task = QUEUE(pop)(&self->task_queue);
-    if (own_task != EMPTY) {
+    if (own_task != EMPTY && own_task != ABORT) {
         debug(self->self_task_pop++);
         return own_task;
     } else if (own_task == EMPTY) {
         debug(self->self_task_empty++);
     } else {
+        assert(own_task == ABORT);
         debug(self->self_task_abort++);
     }
 
@@ -140,6 +146,7 @@ task_t *scheff_try_get_task(worker_thread_t *self) {
         } else if (stolen_task == EMPTY) {
             debug(self->stolen_task_empty++);
         } else {
+            assert(stolen_task == ABORT);
             debug(self->stolen_task_abort++);
         }
     }
@@ -169,6 +176,7 @@ task_t *scheff_try_get_task(worker_thread_t *self) {
         free(task);                                                         \
         RELAXED(fetch_sub, remaining_tasks, 1);                             \
     }
+
 void *scheff_worker_thread(void *_self) {
     worker_thread_t *self = (worker_thread_t *)(_self);
     QUEUE(t) *task_queue = &self->task_queue;
@@ -222,6 +230,7 @@ void *scheff_worker_thread(void *_self) {
                     break;
                 });
                 CASE_EFFECT(request, poll, {
+                    // TODO: why do we need poll, isn't sleep + event loop enough?
                     debug(self->poll_requests++);
 
                     static bool suppress_warning = false;
@@ -250,6 +259,7 @@ void *scheff_worker_thread(void *_self) {
 
                     for (size_t i = 0; i < payload.n_wakers; i++) {
                         task_t *task = (task_t *)payload.wakers[i];
+                        // TODO: Only the last one is priority, right?
                         ENQUEUE_PRIORITY(task);
                     }
 

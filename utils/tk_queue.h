@@ -34,9 +34,13 @@ void tk_queue_init(tk_queue_t *queue, size_t log_size);
 #define EMPTY ((queue_elt_t)NULL)
 #define ABORT ((queue_elt_t)(~(uintptr_t)NULL))
 
+// Should only be called by the unique producer
 void tk_queue_push(tk_queue_t *queue, queue_elt_t task);
+// Should only be called by the unique producer
 void tk_queue_priority_push(tk_queue_t *queue, queue_elt_t task);
+// Should only be called by the unique producer
 queue_elt_t tk_queue_pop(tk_queue_t *queue);
+// Can be call by anyone
 queue_elt_t tk_queue_steal(tk_queue_t *queue);
 
 #endif

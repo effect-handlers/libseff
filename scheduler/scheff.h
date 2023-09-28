@@ -40,7 +40,9 @@
     X(spinlock_fails)         \
     X(fork_requests)          \
     X(poll_requests)          \
-    X(sleep_requests) X(wake_requests) X(return_requests)
+    X(sleep_requests)         \
+    X(wake_requests)          \
+    X(return_requests)
 
 struct task_t;
 struct scheff_t;
@@ -56,7 +58,7 @@ typedef struct scheff_t {
 } scheff_t;
 
 bool scheff_init(scheff_t *self, size_t n_workers);
-void scheff_schedule(scheff_t *self, seff_start_fun_t fn, void *arg);
+bool scheff_schedule(scheff_t *self, seff_start_fun_t fn, void *arg);
 void scheff_run(scheff_t *scheduler);
 void scheff_print_stats(scheff_t *scheduler);
 

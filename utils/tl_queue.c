@@ -33,7 +33,7 @@ void tl_queue_init(tl_queue_t *self, size_t log_size) {
 }
 
 void tl_queue_push(tl_queue_t *self, queue_elt_t elt) {
-    acquire(&self->locked);
+    ACQUIRE_LOCK(&self->locked);
     circular_array_t *arr = self->array;
     int64_t head = self->head;
     int64_t tail = self->tail;
@@ -47,7 +47,7 @@ void tl_queue_push(tl_queue_t *self, queue_elt_t elt) {
 
     CA_SET(arr, tail, elt);
     self->tail = tail + 1;
-    release(&self->locked);
+    RELEASE_LOCK(&self->locked);
     return;
 }
 
@@ -65,36 +65,36 @@ queue_elt_t tl_queue_pop(tl_queue_t *self) {
         self->buffer = EMPTY;
         return buffer;
     }
-    acquire(&self->locked);
+    ACQUIRE_LOCK(&self->locked);
     circular_array_t *arr = self->array;
 
     int64_t head = self->head;
     int64_t tail = self->tail;
     if (head == tail) {
-        release(&self->locked);
+        RELEASE_LOCK(&self->locked);
         return EMPTY;
     }
 
     queue_elt_t elt = CA_GET(arr, head);
     self->head = head + 1;
 
-    release(&self->locked);
+    RELEASE_LOCK(&self->locked);
     return elt;
 }
 
 queue_elt_t tl_queue_steal(tl_queue_t *self) {
-    acquire(&self->locked);
+    ACQUIRE_LOCK(&self->locked);
     circular_array_t *arr = self->array;
     int64_t head = self->head;
     int64_t tail = self->tail;
 
     if (head == tail) {
-        release(&self->locked);
+        RELEASE_LOCK(&self->locked);
         return EMPTY;
     }
 
     queue_elt_t elt = CA_GET(arr, head);
     self->head = head + 1;
-    release(&self->locked);
+    RELEASE_LOCK(&self->locked);
     return elt;
 }
