@@ -35,9 +35,9 @@ FLAGS := ${FLAGS.${BUILD}} -g -Wall -Wunreachable-code -pedantic -pthread \
 	-Wno-zero-length-array \
 	-Wno-unreachable-code-loop-increment
 
-LIBSEFF_LINK_LIBS := ${ROOT_DIR}/output/lib/libseff.a ${ROOT_DIR}/output/lib/libutils.a
+LIBSEFF_LINK_LIBS := ${ROOT_DIR}/output/lib/libutils.a ${ROOT_DIR}/output/lib/libseff.a
 
-LIBSEFF_INCLUDE_DIRS     := -I${ROOT_DIR}/src -I${ROOT_DIR}/utils
+LIBSEFF_INCLUDE_DIRS     := -I${ROOT_DIR}/src -I${ROOT_DIR}/utils -I${ROOT_DIR}/scheduler
 LIBMPROMPT_INCLUDE_DIRS  := -I${DEPS_DIR}/libmprompt/include
 LIBHANDLER_INCLUDE_DIRS  := -I${DEPS_DIR}/libhandler/inc
 CPPCORO_INCLUDE_DIRS     := -I${DEPS_DIR}/cppcoro/include
