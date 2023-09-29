@@ -84,6 +84,7 @@ void *actor_recv(actor_t *act) {
     }
     return msg;
 }
+
 void actor_send(actor_t *target, void *msg) {
     while (!actor_insert_msg(target, msg)) {
         // Wait until there is space in the target's mailbox
