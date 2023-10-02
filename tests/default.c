@@ -31,8 +31,9 @@ int main(void) {
     seff_set_default_handler(EFF_ID(division_by_zero), div_by_zero_crash);
     seff_coroutine_t k;
     seff_coroutine_init(&k, safe_computation, NULL);
+    seff_resumption_t res = seff_coroutine_start(&k);
 
-    seff_eff_t *exn = seff_handle(&k, NULL, HANDLES(division_by_zero));
+    seff_eff_t *exn = seff_handle(res, NULL, HANDLES(division_by_zero));
     switch (exn->id) {
         CASE_EFFECT(exn, division_by_zero, {
             printf("Caught division (%d / 0) in coroutine, continuing main\n", payload.dividend);

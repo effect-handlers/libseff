@@ -22,7 +22,7 @@ void *fn(seff_coroutine_t *self, void *_arg) {
 int main(void) {
     for (int i = 0; i < REPS; i++) {
         seff_coroutine_t *k = seff_coroutine_new(fn, (void *)(10 * 1000));
-        int64_t res = (int64_t)seff_resume(k, NULL);
+        int64_t res = (int64_t)seff_resume(seff_coroutine_start(k), NULL);
 
         printf("RES: %ld\n", res);
         seff_coroutine_delete(k);

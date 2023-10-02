@@ -5,14 +5,15 @@
 
 #define MAKE_GENERATOR_DECORATOR(decorator_name, decorator_data, decorator_behavior) \
     typedef struct {                                                                 \
-        seff_coroutine_t *base_generator;                                            \
+        seff_resumption_t base_generator;                                            \
         decorator_data                                                               \
     } decorator_name##_args;                                                         \
     void *decorator_name(seff_coroutine_t *self, void *_args) {                      \
         decorator_name##_args args = *(decorator_name##_args *)_args;                \
         while (true) {                                                               \
             void *next = seff_resume(args.base_generator, NULL);                     \
-            if (args.base_generator->state == FINISHED) {                            \
+            args.base_generator.sequence += 1;                                       \
+            if (args.base_generator.coroutine->state == FINISHED) {                  \
                 return NULL;                                                         \
             } else {                                                                 \
                 decorator_behavior;                                                  \
@@ -47,18 +48,20 @@ int main(void) {
     seff_coroutine_t *fib = seff_coroutine_new(fibonacci_generator, NULL);
 
     map_args twice_fib_args;
-    twice_fib_args.base_generator = fib;
+    twice_fib_args.base_generator = seff_coroutine_start(fib);
     twice_fib_args.fn = twice;
     seff_coroutine_t *twice_fib = seff_coroutine_new(map, &twice_fib_args);
 
     filter_args filter_fib_args;
-    filter_fib_args.base_generator = twice_fib;
+    filter_fib_args.base_generator = seff_coroutine_start(twice_fib);
     filter_fib_args.predicate = ends_in_six;
     seff_coroutine_t *filter_fib = seff_coroutine_new(filter, &filter_fib_args);
+    seff_resumption_t filter_fib_res = seff_coroutine_start(filter_fib);
 
     int64_t next_elt;
     for (int i = 0; i < 1000; i++) {
-        next_elt = (int64_t)seff_resume(filter_fib, NULL);
+        next_elt = (int64_t)seff_resume(filter_fib_res, NULL);
+        filter_fib_res.sequence += 1;
         if (filter_fib->state == FINISHED)
             break;
     }

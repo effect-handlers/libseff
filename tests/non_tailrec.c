@@ -16,14 +16,14 @@ void *effectful(seff_coroutine_t *self, void *arg) {
 
 void dummy(void) __attribute__((optnone)) { free(NULL); }
 
-void handle(seff_coroutine_t *k) {
-    seff_eff_t *request = seff_handle(k, NULL, HANDLES(put));
-    if (k->state == FINISHED)
+void handle(seff_resumption_t res) {
+    seff_eff_t *request = seff_handle(res, NULL, HANDLES(put));
+    if (res.coroutine->state == FINISHED)
         return;
     switch (request->id) {
         CASE_EFFECT(request, put, {
             dummy();
-            handle(k);
+            handle(request->resumption);
             dummy();
         });
     }
@@ -38,6 +38,6 @@ int main(int argc, char **argv) {
 
     seff_coroutine_t *k = seff_coroutine_new(effectful, (void *)depth);
 
-    handle(k);
+    handle(seff_coroutine_start(k));
     return 0;
 }

@@ -17,6 +17,8 @@ void *fn(seff_coroutine_t *self, void *arg) {
 
 int main(void) {
     seff_coroutine_t *k = seff_coroutine_new(fn, NULL);
-    seff_resume(k, NULL);
-    seff_resume(k, NULL);
+    seff_resumption_t res = seff_coroutine_start(k);
+    seff_resume(res, NULL);
+    res.sequence += 1;
+    seff_resume(res, NULL);
 }

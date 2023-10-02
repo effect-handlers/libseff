@@ -1,4 +1,5 @@
 #include "seff.h"
+#include "seff_types.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,17 +22,18 @@ int main(void) {
     size_t requests = 0;
 
     seff_coroutine_t *k = seff_coroutine_new(coroutine, NULL);
-    seff_eff_t *request = seff_resume(k, NULL);
+
+    seff_eff_t *request = seff_resume(seff_coroutine_start(k), NULL);
 
     int64_t state = 0;
     while (requests < 100 * 1000 * 1000) { // 100.000.000
         switch (request->id) {
         case GET:
-            request = seff_resume(k, (void *)state);
+            request = seff_resume(request->resumption, (void *)state);
             break;
         case PUT:
             state = (int64_t)request->payload;
-            request = seff_resume(k, NULL);
+            request = seff_resume(request->resumption, NULL);
             break;
         default:
             assert(0);

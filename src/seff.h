@@ -61,7 +61,7 @@ static inline void *seff_perform(effect_id eff_id, void *payload) {
     if (handler) {
         seff_eff_t e;
         e.id = eff_id;
-        e.resumption.coroutine = seff_current_coroutine();
+        e.resumption.coroutine = handler;
         e.resumption.sequence = e.resumption.coroutine->sequence;
         e.payload = payload;
         return seff_yield(handler, &e);

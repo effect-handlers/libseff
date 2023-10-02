@@ -1,4 +1,5 @@
 #include "seff.h"
+#include "seff_types.h"
 #include <stdio.h>
 
 void *stacky(void *a) {
@@ -33,7 +34,8 @@ int main(void) {
     int reps = 1;
     while (reps--) {
         seff_coroutine_t *a = seff_coroutine_new(coroutine_a, NULL);
-        seff_resume(a, NULL);
+        seff_resumption_t res = seff_coroutine_start(a);
+        seff_resume(res, NULL);
         seff_coroutine_delete(a);
     }
 }

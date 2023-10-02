@@ -13,6 +13,6 @@ void *coroutine(seff_coroutine_t *k, void *arg) {
 int main(void) {
     seff_coroutine_t *k = seff_coroutine_new_sized(coroutine, NULL, 128);
     puts("Created coroutine");
-    seff_resume(k, NULL);
+    seff_resume(seff_coroutine_start(k), NULL);
     seff_coroutine_delete(k);
 }

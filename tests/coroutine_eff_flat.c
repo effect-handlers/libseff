@@ -31,17 +31,19 @@ void *effectful_body(seff_coroutine_t *k, void *args) {
 
 int main(void) {
     seff_coroutine_t *k = seff_coroutine_new(effectful_body, NULL);
+    seff_resumption_t res = seff_coroutine_start(k);
 
-    eff *request = seff_resume(k, NULL);
+    eff *request = seff_resume(res, NULL);
 
     for (size_t i = 0; i < 5; i++) {
+        res.sequence += 1;
         switch (request->code) {
         case PRINT_CODE:
             puts(request->payload);
-            request = seff_resume(k, NULL);
+            request = seff_resume(res, NULL);
             break;
         case READ_CODE:
-            request = seff_resume(k, "MSG");
+            request = seff_resume(res, "MSG");
             break;
         default:
             assert(0);

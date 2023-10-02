@@ -47,14 +47,18 @@ void *nested(seff_coroutine_t *read_handler, void *args) {
 
 void *parent(seff_coroutine_t *toplevel_handler, void *args) {
     seff_coroutine_t *child = seff_coroutine_new(nested, toplevel_handler);
-    seff_handle(child, NULL, HANDLES(read));
+    seff_resumption_t res = seff_coroutine_start(child);
+
+    seff_eff_t *request = seff_handle(res, NULL, HANDLES(read));
+    res = request->resumption;
 
     for (size_t i = 0; i < 3; i++) {
         bounce("parent");
         char i_str[2];
         i_str[0] = '0' + i;
         i_str[1] = 0;
-        seff_handle(child, i_str, HANDLES(read));
+        request = seff_handle(res, i_str, HANDLES(read));
+        res = request->resumption;
     }
 
     return NULL;
@@ -63,7 +67,7 @@ void *parent(seff_coroutine_t *toplevel_handler, void *args) {
 int main(void) {
     seff_coroutine_t *k = seff_coroutine_new(parent, NULL);
 
-    seff_eff_t *request = seff_resume(k, NULL);
+    seff_eff_t *request = seff_resume(seff_coroutine_start(k), NULL);
     while (k->state != FINISHED) {
         void *response;
         switch (request->id) {
@@ -80,6 +84,6 @@ int main(void) {
             assert(0);
             return -1;
         }
-        request = seff_resume(k, response);
+        request = seff_resume(request->resumption, response);
     }
 }

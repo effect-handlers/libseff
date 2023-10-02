@@ -1,4 +1,5 @@
 #include "seff.h"
+#include "seff_types.h"
 #include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -12,8 +13,10 @@ void *fn(seff_coroutine_t *self, void *arg) {
 
 void *myThreadFun(void *vargp) {
     seff_coroutine_t *k = seff_coroutine_new(fn, NULL);
-    seff_resume(k, NULL);
-    seff_resume(k, NULL);
+    seff_resumption_t res = seff_coroutine_start(k);
+    seff_resume(res, NULL);
+    res.sequence += 1;
+    seff_resume(res, NULL);
     return NULL;
 }
 

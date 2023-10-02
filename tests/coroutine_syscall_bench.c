@@ -20,8 +20,9 @@ void *coroutine(seff_coroutine_t *k, void *arg) {
 int main(void) {
     counter = 0;
     seff_coroutine_t *k = seff_coroutine_new(coroutine, NULL);
+    seff_resumption_t res = seff_coroutine_start(k);
     puts("Created coroutine");
-    seff_resume(k, NULL);
+    seff_resume(res, NULL);
     seff_coroutine_delete(k);
     printf("Total counter: %lu", counter);
 }

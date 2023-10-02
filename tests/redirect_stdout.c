@@ -19,11 +19,11 @@ extern size_t default_frame_size;
 void *with_output_to_buffer(seff_start_fun_t *fn, void *arg, char *buffer) {
     seff_coroutine_t k;
     seff_coroutine_init(&k, fn, arg);
+    seff_resumption_t res = seff_coroutine_start(&k);
 
     char *buffptr = buffer;
-
     while (true) {
-        seff_eff_t *req = seff_handle(&k, NULL, HANDLES(print));
+        seff_eff_t *req = seff_handle(res, NULL, HANDLES(print));
         if (k.state == FINISHED) {
             return (void *)req;
         }
@@ -31,6 +31,7 @@ void *with_output_to_buffer(seff_start_fun_t *fn, void *arg, char *buffer) {
             CASE_EFFECT(req, print, {
                 // Note we are NOT using strcpy!
                 buffptr = stpcpy(buffptr, payload.str);
+                res = req->resumption;
                 break;
             });
         default:
@@ -45,7 +46,7 @@ void *with_output_to_default(seff_start_fun_t *fn, void *arg) {
     seff_coroutine_t k;
     seff_coroutine_init(&k, fn, arg);
 
-    seff_eff_t *req = seff_handle(&k, NULL, 0);
+    seff_eff_t *req = seff_handle(seff_coroutine_start(&k), NULL, 0);
     assert(k.state == FINISHED);
     return (void *)req;
 }
