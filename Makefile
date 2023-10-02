@@ -82,7 +82,7 @@ output/cl_queue.o: utils/cl_queue.h utils/cl_queue.c | output/lib
 	$(CC) $(CFLAGS) -I./utils -o output/cl_queue.o -c utils/cl_queue.c
 
 output/net.o: utils/net.c utils/net.h | output/lib
-	$(CC) $(CFLAGS) -I./src -I./utils -o $@ -c $<
+	$(CC) $(CFLAGS) -I./src -I./utils -I./scheduler -o $@ -c $<
 
 output/http_response.o: utils/http_response.c utils/http_response.h | output/lib
 	$(CC) $(CFLAGS) -o $@ -c $<

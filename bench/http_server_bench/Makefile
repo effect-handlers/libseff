@@ -1,4 +1,4 @@
-all: output/libseff_simple output/libseff_stealing output/libseff_spilling output/libseff_epoll
+all: output/libseff_simple output/libseff_stealing output/libseff_spilling output/libseff_epoll output/libscheff
 
 include ../common.mk
 
