@@ -211,6 +211,8 @@ def parameter(name, default):
 byte = named_ty('uint8_t', 1)
 void = named_ty('void', 0)
 
+int64_t = named_ty('int64_t', 8)
+
 def ptr(ty: UnsizedTy):
     return Ty(lambda s: ty.declare('*'+s), arch.word_type.size)
 

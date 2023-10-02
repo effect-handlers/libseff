@@ -21,6 +21,7 @@
 #define SEFF_H
 
 #include "seff_types.h"
+
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -60,6 +61,8 @@ static inline void *seff_perform(effect_id eff_id, void *payload) {
     if (handler) {
         seff_eff_t e;
         e.id = eff_id;
+        e.resumption.coroutine = seff_current_coroutine();
+        e.resumption.sequence = e.resumption.coroutine->sequence;
         e.payload = payload;
         return seff_yield(handler, &e);
     } else {
@@ -74,11 +77,11 @@ static inline void *seff_perform(effect_id eff_id, void *payload) {
 
 E __attribute__((noreturn)) void seff_throw(effect_id effect, void *payload);
 E __attribute__((noreturn, no_split_stack)) void seff_return(seff_coroutine_t *k, void *result);
-E __attribute__((noreturn, no_split_stack)) void coroutine_prelude(void);
 
+E seff_resumption_t seff_coroutine_start(seff_coroutine_t *coroutine);
 E __attribute__((no_split_stack)) void *seff_handle(
-    seff_coroutine_t *k, void *arg, effect_set handled);
-E void *seff_resume(seff_coroutine_t *k, void *arg);
+    seff_resumption_t res, void *arg, effect_set handled);
+E void *seff_resume(seff_resumption_t res, void *arg);
 
 // TODO: this is architecture specific
 #define MAKE_SYSCALL_WRAPPER(ret, fn, ...)                                                        \
@@ -140,29 +143,5 @@ E void *seff_resume(seff_coroutine_t *k, void *arg);
         __##name##_eff_payload __payload = {__VA_ARGS__}; \
         seff_throw(__##name##_eff_id, &__payload);        \
     })
-
-/*
-  Proof of concept. The actual syntax might look more like:
-
-  handle coroutine with value {
-      case (Eff1 e) {
-          ...
-      }
-      case (Eff2 e) {
-          ...
-      }
-      case (finish v) {
-          ...
-      }
-
-*/
-#define HANDLE1(coroutine, value, eff, action, result)                       \
-    {                                                                        \
-        seff_eff_t *__request = seff_handle(coroutine, value, HANDLES(eff)); \
-        if (coroutine->state == FINISHED)                                    \
-            result else switch (__request->id) {                             \
-                CASE_EFFECT(__request, eff, { action break; });              \
-            }                                                                \
-    }
 
 #endif

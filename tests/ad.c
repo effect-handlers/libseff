@@ -70,9 +70,9 @@ void *example(seff_coroutine_t *self, void *args) {
     return NULL;
 }
 
-void handle(seff_coroutine_t *k, prop_t *response) {
-    seff_eff_t *request = seff_handle(k, response, r_smooth);
-    if (k->state == FINISHED) {
+void handle(seff_resumption_t res, prop_t *response) {
+    seff_eff_t *request = seff_handle(res, response, r_smooth);
+    if (res.coroutine->state == FINISHED) {
         *result.dv = 1.0;
         return;
     }
@@ -81,7 +81,7 @@ void handle(seff_coroutine_t *k, prop_t *response) {
             double v = e_c(payload.value);
             double dv = 0.0;
             prop_t r = ((prop_t){v, &dv});
-            handle(k, &r);
+            handle(request->resumption, &r);
 
             break;
         })
@@ -94,7 +94,7 @@ void handle(seff_coroutine_t *k, prop_t *response) {
             }
             double dv = 0.0;
             prop_t r = ((prop_t){v, &dv});
-            handle(k, &r);
+            handle(request->resumption, &r);
 
             double *dx = payload.arg1.dv;
             switch (payload.op) {
@@ -116,7 +116,7 @@ void handle(seff_coroutine_t *k, prop_t *response) {
             }
             double dv = 0.0;
             prop_t r = ((prop_t){v, &dv});
-            handle(k, &r);
+            handle(request->resumption, &r);
 
             double x = payload.arg1.v;
             double y = payload.arg2.v;
@@ -140,7 +140,7 @@ void handle(seff_coroutine_t *k, prop_t *response) {
 void *reverse(seff_coroutine_t *toplevel_handler, void *args) {
     seff_coroutine_t *child = seff_coroutine_new(example, args);
 
-    handle(child, NULL);
+    handle(seff_coroutine_start(child), NULL);
 
     printf("%lf\n", *x.dv);
 
@@ -149,15 +149,15 @@ void *reverse(seff_coroutine_t *toplevel_handler, void *args) {
     return NULL;
 }
 
-void *evaluate(seff_coroutine_t *k, void *args) {
+void *evaluate(seff_coroutine_t *k) {
     double value;
 
-    seff_eff_t *request = seff_handle(k, NULL, e_smooth);
+    seff_eff_t *request = seff_handle(seff_coroutine_start(k), NULL, e_smooth);
     while (k->state != FINISHED) {
         switch (request->id) {
             CASE_EFFECT(request, e_ap0, {
                 value = payload.value;
-                request = seff_handle(k, (void *)&value, e_smooth);
+                request = seff_handle(request->resumption, (void *)&value, e_smooth);
                 break;
             })
             CASE_EFFECT(request, e_ap1, {
@@ -166,7 +166,7 @@ void *evaluate(seff_coroutine_t *k, void *args) {
                     value = -payload.arg1;
                     break;
                 }
-                request = seff_handle(k, (void *)&value, e_smooth);
+                request = seff_handle(request->resumption, (void *)&value, e_smooth);
                 break;
             })
             CASE_EFFECT(request, e_ap2, {
@@ -180,7 +180,7 @@ void *evaluate(seff_coroutine_t *k, void *args) {
                     value = arg1 * arg2;
                     break;
                 }
-                request = seff_handle(k, (void *)&value, e_smooth);
+                request = seff_handle(request->resumption, (void *)&value, e_smooth);
                 break;
             })
         }
@@ -197,7 +197,7 @@ int main(int argc, char **argv) {
 
     seff_coroutine_t *k = seff_coroutine_new(reverse, (void *)iters);
 
-    evaluate(k, NULL);
+    evaluate(k);
 
     seff_coroutine_delete(k);
 

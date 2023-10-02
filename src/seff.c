@@ -32,7 +32,12 @@
 
 extern __thread seff_coroutine_t *_seff_current_coroutine;
 
-void *seff_resume(seff_coroutine_t *k, void *arg) { return seff_handle(k, arg, ~0); }
+void *seff_resume(seff_resumption_t res, void *arg) { return seff_handle(res, arg, ~0); }
+
+seff_resumption_t seff_coroutine_start(seff_coroutine_t *coroutine) {
+
+    return (seff_resumption_t){coroutine, 0};
+}
 
 void frame_push(seff_cont_t *cont, void *elt) {
     cont->rsp = (char *)cont->rsp - sizeof(void *);
@@ -81,6 +86,7 @@ seff_coroutine_t *seff_coroutine_new_sized(seff_start_fun_t *fn, void *arg, size
     return k;
 }
 
+extern __attribute__((noreturn, no_split_stack)) void coroutine_prelude(void);
 // TODO: We're getting this from object file seff_mem.o, this seems dirty
 extern size_t default_frame_size;
 bool seff_coroutine_init(seff_coroutine_t *k, seff_start_fun_t *fn, void *arg) {
@@ -97,7 +103,8 @@ bool seff_coroutine_init_sized(
         return false;
     }
     k->frame_ptr = stack;
-    k->resume_point.rsp = (void *)rsp;
+    k->sequence = 0;
+    k->resume_point.rsp = (void*)rsp;
     k->resume_point.rbp = NULL;
     k->resume_point.ip = (void *)coroutine_prelude;
 #ifdef STACK_POLICY_SEGMENTED

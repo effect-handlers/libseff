@@ -61,11 +61,6 @@ max_effects = Defn('MAX_EFFECTS', arch.word_type.size * 8)
 effect_set = Typedef('effect_set', arch.word_type)
 effect_id = Typedef('effect_id', arch.word_type)
 
-eff = Struct('seff_eff_t',
-    Field('id', effect_id.ty),
-    Field('payload', ptr(void))
-)
-
 cont_fields = [
     Field('current_coroutine', ptr(void)),
 
@@ -110,9 +105,21 @@ else:
 coroutine = Struct('seff_coroutine_t',
     Field('frame_ptr', frame_ptr.ty),
     Field('resume_point', cont.ty),
+    Field('sequence', atomic(int64_t)),
     Field('state', coroutine_state.ty),
     Field('parent_coroutine', ptr(unsized_named_ty('struct _seff_coroutine_t'))), # This should be improved
     Field('handled_effects', effect_set.ty)
+)
+
+resumption = Struct('seff_resumption_t',
+    Field('coroutine', ptr(coroutine.ty)),
+    Field('sequence', int64_t)
+)
+
+eff = Struct('seff_eff_t',
+    Field('id', effect_id.ty),
+    Field('resumption', resumption.ty),
+    Field('payload', ptr(void))
 )
 
 Typedef('seff_start_fun_t', func([ptr(coroutine.ty), ptr(void)], ptr(void)))

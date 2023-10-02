@@ -86,11 +86,20 @@ _seff_paused_coroutine_stack_top:
 
 .text
 
-# void* seff_yield(seff_coroutine_t* self, void* arg)
+# void* seff_yield(seff_resumption_t res, void* arg)
 seff_yield:
     .cfi_startproc
-    # self in %rdi
-    # arg in %rsi
+    # res in (%rdi, %rsi)
+    #     coroutine in %rdi
+    #     sequence in %rsi
+    # arg in %rdx
+
+    movq %rsi, %rax
+    movq %rsi, %rcx
+    incq %rcx
+    # compare %rax w/ second operand, if equal, store first operand
+    lock cmpxchgq %rcx, (seff_coroutine_t__sequence)(%rdi)
+    jnz CRASH
 
     swap_registers
 
@@ -124,8 +133,11 @@ seff_yield:
 
     swap_stack
 
-    movq %rsi, %rax
+    movq %rdx, %rax
     jmp *%r10
+
+CRASH:
+    jmp *0x0
     .cfi_endproc
 .size seff_yield, . - seff_yield
 

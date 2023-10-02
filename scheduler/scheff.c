@@ -17,6 +17,7 @@
 #include "atomic.h"
 
 typedef struct task_t {
+    seff_resumption_t res;
     seff_coroutine_t coroutine;
     scheff_poll_condition_t *poll_condition;
     void *poll_arg;
@@ -110,6 +111,7 @@ bool scheff_schedule(scheff_t *self, seff_start_fun_t fn, void *arg) {
     if (!task)
         return false;
     seff_coroutine_init_sized(&task->coroutine, fn, arg, STACK_SIZE);
+    task->res = seff_coroutine_start(&task->coroutine);
     task->poll_condition = NULL;
     task->poll_arg = NULL;
     debug(task->id = self->task_counter++);
@@ -205,7 +207,7 @@ void *scheff_worker_thread(void *_self) {
         }
         current_task->poll_condition = NULL;
 
-        seff_eff_t *request = (seff_eff_t *)seff_handle(&current_task->coroutine, NULL,
+        seff_eff_t *request = (seff_eff_t *)seff_handle(current_task->res, NULL,
             HANDLES(fork) | HANDLES(poll) | HANDLES(sleep) | HANDLES(wake));
         if (current_task->coroutine.state == FINISHED) {
             debug(self->return_requests++);
