@@ -20,7 +20,8 @@
 #define BUF_SIZE 256
 
 #ifndef NDEBUG
-#define conn_report(msg, ...) printf("[connection %d]: " msg, connection_id, ##__VA_ARGS__)
+#define conn_report(msg, ...) \
+    threadsafe_printf("[connection %d]: " msg, connection_id, ##__VA_ARGS__)
 #else
 #define conn_report(msg, ...)
 #endif
