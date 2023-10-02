@@ -36,6 +36,15 @@ typedef struct mvar_t {
     _Atomic value_queue vq;
 } mvar_t;
 
+#define MVAR_FILLED(ptr)            \
+    {                               \
+        (value_queue) { ptr, NULL } \
+    }
+#define MVAR_EMPTY                   \
+    {                                \
+        (value_queue) { NULL, NULL } \
+    }
+
 void mvar_init(mvar_t *);
 
 void mvar_put(mvar_t *, void *);

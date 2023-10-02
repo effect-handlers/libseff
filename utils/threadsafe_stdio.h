@@ -2,8 +2,7 @@
 
 int threadsafe_puts(const char *msg);
 
-// This can be called multiple times
-bool init_locks();
+int threadsafe_fputs(const char *msg, FILE *f);
 
 MAKE_SYSCALL_WRAPPER(int, sprintf, char *, const char *, ...);
 
@@ -11,7 +10,7 @@ MAKE_SYSCALL_WRAPPER(int, sprintf, char *, const char *, ...);
     do {                                                     \
         char buf[100];                                       \
         sprintf_syscall_wrapper(buf, format, ##__VA_ARGS__); \
-        threadsafe_puts(buf);                                \
+        threadsafe_fputs(buf, stdout);                       \
     } while (0);
 
 #ifndef NDEBUG
