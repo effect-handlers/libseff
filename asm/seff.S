@@ -86,20 +86,11 @@ _seff_paused_coroutine_stack_top:
 
 .text
 
-# void* seff_yield(seff_resumption_t res, void* arg)
+# void* seff_yield(seff_coroutine_t* self, void* arg)
 seff_yield:
     .cfi_startproc
-    # res in (%rdi, %rsi)
-    #     coroutine in %rdi
-    #     sequence in %rsi
-    # arg in %rdx
-
-    movq %rsi, %rax
-    movq %rsi, %rcx
-    incq %rcx
-    # compare %rax w/ second operand, if equal, store first operand
-    lock cmpxchgq %rcx, (seff_coroutine_t__sequence)(%rdi)
-    jnz CRASH
+    # self in %rdi
+    # arg in %rsi
 
     swap_registers
 
@@ -133,7 +124,7 @@ seff_yield:
 
     swap_stack
 
-    movq %rdx, %rax
+    movq %rsi, %rax
     jmp *%r10
 
 CRASH:
@@ -141,13 +132,23 @@ CRASH:
     .cfi_endproc
 .size seff_yield, . - seff_yield
 
-# void* seff_handle(seff_coroutine_t* k, void* arg, effect_set handled)
+# void* seff_handle(seff_resumption_t res, void* arg, effect_set handled)
 seff_handle:
     .cfi_startproc
-    # k in %rdi
-    # arg in %rsi
-    # handled in %rdx
-    movq %rdx, (seff_coroutine_t__handled_effects)(%rdi)
+    # res in (%rdi, %rsi)
+    #     coroutine in %rdi
+    #     sequence in %rsi
+    # arg in %rdx
+    # handled in %rcx
+
+    movq %rsi, %rax
+    movq %rsi, %r11
+    incq %r11
+    # compare %rax w/ second operand, if equal, store first operand
+    lock cmpxchgq %r11, (seff_coroutine_t__sequence)(%rdi)
+    jnz CRASH
+
+    movq %rcx, (seff_coroutine_t__handled_effects)(%rdi)
 
     swap_registers
 
@@ -190,7 +191,7 @@ seff_handle_after_store_system_stack:
     # Stack
     swap_stack
 
-    movq %rsi, %rax
+    movq %rdx, %rax
     jmp *%r10
     .cfi_endproc
 .size seff_handle, . - seff_handle
