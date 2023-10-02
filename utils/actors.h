@@ -39,7 +39,6 @@ typedef struct actor_t {
 bool actor_init(actor_t *actor, actor_fn_t *behavior, size_t mailbox_capacity);
 void actor_destroy(actor_t *actor);
 bool actor_insert_msg(actor_t *actor, void *msg);
-bool actor_has_msg(actor_t *actor);
 void *actor_remove_msg(actor_t *actor);
 
 void *actor_recv(actor_t *act);

@@ -1,7 +1,5 @@
 #include "actors.h"
 #include "chameneos_common.h"
-// #define SCHEDULER_POLICY_WORK_SPILLING
-#include "scheduler.c"
 
 typedef struct {
     actor_t *broker;

@@ -1,20 +1,11 @@
 #include "actors.h"
 #include "seff.h"
+#include "threadsafe_stdio.h"
 
 typedef struct {
     actor_t *sender;
     int64_t number;
 } pong_msg;
-
-#define GUARD(mutex, block)                \
-    {                                      \
-        pthread_mutex_lock(mutex);         \
-        block pthread_mutex_unlock(mutex); \
-    }
-static pthread_mutex_t puts_mutex;
-
-#define threadsafe_puts(str) GUARD(&puts_mutex, { puts(str); });
-#define threadsafe_printf(...) GUARD(&puts_mutex, { printf(__VA_ARGS__); })
 
 void *pong_fn(seff_coroutine_t *k, actor_t *self) {
     threadsafe_puts("[pong] initialized");

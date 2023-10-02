@@ -29,6 +29,7 @@
 #include <unistd.h>
 
 #include "scheff.h"
+#include "threadsafe_stdio.h"
 
 #ifndef NDEBUG
 #define deb_log(msg, ...) threadsafe_printf(msg, ##__VA_ARGS__)
@@ -132,9 +133,11 @@ bool poll_await_condition(void *_arg) {
     return poll(arg, 1, 0);
 }
 
-short poll_await(int fd, short awaiting_events) {
+short poll_await(int fd, uint32_t awaiting_events) {
+    // Only valid with epoll
+    assert(!(awaiting_events & EPOLLET));
     struct pollfd polls;
-    polls.events = awaiting_events;
+    polls.events = (short)awaiting_events;
     polls.fd = fd;
 
     scheff_poll(poll_await_condition, (void *)&polls);
@@ -160,7 +163,8 @@ int await_accept4(int socket_fd) {
         }
     }
 
-    short revents = poll_await(socket_fd, READ | ET);
+    // This should be EPOLLET, but we're using poll now
+    short revents = poll_await(socket_fd, READ);
     if (HANGUP & revents)
         return 0;
     if (!(READ & revents))
@@ -185,7 +189,8 @@ int await_recv(int conn_fd, char *buffer, size_t bufsz) {
             return n_read;
         }
     }
-    short revents = poll_await(conn_fd, READ | ET);
+    // This should be EPOLLET, but we're using poll now
+    short revents = poll_await(conn_fd, READ);
     if (HANGUP & revents)
         return 0;
     if (!(READ & revents))

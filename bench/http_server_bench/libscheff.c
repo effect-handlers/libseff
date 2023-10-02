@@ -18,22 +18,8 @@
 #include "picohttpparser.h"
 #include "scheff.h"
 #include "seff.h"
+#include "threadsafe_stdio.h"
 
-#define GUARD(mutex, block)                \
-    {                                      \
-        pthread_mutex_lock(mutex);         \
-        block pthread_mutex_unlock(mutex); \
-    }
-static pthread_mutex_t puts_mutex;
-
-#define threadsafe_puts(str) GUARD(&puts_mutex, { puts(str); });
-#define threadsafe_printf(...) GUARD(&puts_mutex, { printf(__VA_ARGS__); })
-
-#ifndef NDEBUG
-#define deb_log(msg, ...) threadsafe_printf(msg, ##__VA_ARGS__)
-#else
-#define deb_log(msg, ...)
-#endif
 #define conn_log(msg, ...) deb_log("[connection %d]: " msg, connection_id, ##__VA_ARGS__)
 
 const char *RESPONSE_TEXT =

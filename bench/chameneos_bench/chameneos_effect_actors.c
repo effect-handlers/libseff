@@ -1,6 +1,5 @@
 #include "actors.h"
 #include "chameneos_effect.h"
-#include "scheduler.c"
 
 typedef struct {
     actor_t *broker;

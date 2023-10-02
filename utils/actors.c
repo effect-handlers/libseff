@@ -33,7 +33,8 @@ void actor_destroy(actor_t *actor) {
     free(actor->mailbox);
     actor->mailbox = NULL;
 }
-bool actor_has_space(actor_t *actor) {
+bool actor_has_space_poll(void *_actor) {
+    actor_t *actor = (actor_t *)_actor;
     return atomic_load(&actor->reserved_size) < actor->mailbox_capacity;
 }
 
@@ -55,7 +56,11 @@ bool actor_insert_msg(actor_t *actor, void *msg) {
     return true;
 }
 
-bool actor_has_msg(actor_t *actor) { return atomic_load(&actor->ready_size) > 0; }
+bool actor_has_msg_poll(void *_actor) {
+    actor_t *actor = (actor_t *)_actor;
+    return atomic_load(&actor->ready_size) > 0;
+}
+
 void *actor_remove_msg(actor_t *actor) {
     int64_t old_size = atomic_load(&actor->ready_size);
     if (old_size <= 0) {
@@ -79,7 +84,7 @@ void *actor_remove_msg(actor_t *actor) {
 void *actor_recv(actor_t *act) {
     void *msg = actor_remove_msg(act);
     while (!msg) {
-        scheff_poll(actor_has_msg, (void *)act);
+        scheff_poll(actor_has_msg_poll, (void *)act);
         msg = actor_remove_msg(act);
     }
     return msg;
@@ -88,7 +93,7 @@ void *actor_recv(actor_t *act) {
 void actor_send(actor_t *target, void *msg) {
     while (!actor_insert_msg(target, msg)) {
         // Wait until there is space in the target's mailbox
-        scheff_poll(actor_has_space, (void *)target);
+        scheff_poll(actor_has_space_poll, (void *)target);
     }
     return;
 }

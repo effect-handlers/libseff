@@ -16,9 +16,9 @@ void *producer(seff_coroutine_t *self, void *_arg) {
     args *arg = (args *)_arg;
 
     for (int i = 0; i < arg->els; i++) {
-        printf("Putting [%d]\n", i + arg->start);
-        mvar_put(arg->mv, (void *)i + arg->start);
-        printf("Put [%d]\n", i + arg->start);
+        printf("Putting [%lu]\n", i + arg->start);
+        mvar_put(arg->mv, (void *)((uintptr_t)i + arg->start));
+        printf("Put [%lu]\n", i + arg->start);
     }
     printf("Bye producer\n");
 
@@ -31,7 +31,7 @@ void *consumer(seff_coroutine_t *self, void *_arg) {
     for (int i = 0; i < arg->els; i++) {
         printf("Taking\n");
         size_t x = (size_t)mvar_take(arg->mv);
-        printf("Took %d\n", x);
+        printf("Took %zu\n", x);
     }
     printf("Bye consumer\n");
 
