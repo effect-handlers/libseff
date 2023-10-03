@@ -97,6 +97,7 @@ if stack_policy == segmented:
         Field('prev', ptr(unsized_named_ty('struct _seff_stack_segment_t'))), # This should be improved
         Field('next', ptr(unsized_named_ty('struct _seff_stack_segment_t'))), # This should be improved
         Field('size', arch.size_t),
+        Field('canary', ptr(void)),
         # Padding to allow __morestack to run and to host the red zone mandated by
         # the x64 ABI
         # TODO: figure out if we can reduce this
