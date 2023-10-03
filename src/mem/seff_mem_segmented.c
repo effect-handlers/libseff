@@ -49,6 +49,7 @@ seff_stack_segment_t *init_segment(size_t frame_size) {
     segment->prev = NULL;
     segment->next = NULL;
     segment->size = frame_size;
+    segment->canary = (void *)0x999999999999;
 
     return segment;
 }
