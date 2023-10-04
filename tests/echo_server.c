@@ -12,16 +12,15 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "mvar_stdio.h"
 #include "net.h"
 #include "scheff.h"
 #include "seff.h"
-#include "threadsafe_stdio.h"
 
 #define BUF_SIZE 256
 
 #ifndef NDEBUG
-#define conn_report(msg, ...) \
-    threadsafe_printf("[connection %d]: " msg, connection_id, ##__VA_ARGS__)
+#define conn_report(msg, ...) mvar_printf("[connection %d]: " msg, connection_id, ##__VA_ARGS__)
 #else
 #define conn_report(msg, ...)
 #endif
@@ -67,20 +66,20 @@ void *connection_fun(seff_coroutine_t *self, void *_arg) {
 void *listener_fun(seff_coroutine_t *self, void *_arg) {
     int socket_fd = (int)(uintptr_t)_arg;
 #ifndef NDEBUG
-    threadsafe_puts("Listening for connections\n");
+    mvar_puts("Listening for connections\n");
 #endif
 
     while (true) {
         int connection_fd = await_accept4(socket_fd);
         if (connection_fd == -1) {
 #ifndef NDEBUG
-            threadsafe_puts("Error while listening for connection -- did the "
-                            "OS kill the socket?\n");
+            mvar_puts("Error while listening for connection -- did the "
+                      "OS kill the socket?\n");
 #endif
             break;
         }
 #ifndef NDEBUG
-        threadsafe_puts("Got connection\n");
+        mvar_puts("Got connection\n");
 #endif
         scheff_fork(connection_fun, (void *)(uintptr_t)connection_fd);
     }

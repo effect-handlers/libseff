@@ -28,11 +28,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "mvar_stdio.h"
 #include "scheff.h"
-#include "threadsafe_stdio.h"
 
 #ifndef NDEBUG
-#define deb_log(msg, ...) threadsafe_printf(msg, ##__VA_ARGS__)
+#define deb_log(msg, ...) mvar_printf(msg, ##__VA_ARGS__)
 #else
 #define deb_log(msg, ...)
 #endif
