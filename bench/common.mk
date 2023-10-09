@@ -62,7 +62,7 @@ LDFLAGS_LIBSEFF     := $(LIBSEFF_LINK_LIBS) $(LDFLAGS)
 LDFLAGS_LIBCO       := -L${DEPS_DIR}/libco/lib $(LDFLAGS) -ldl -lcolib
 LDFLAGS_CPPCORO     := -L${DEPS_DIR}/cppcoro/build/ $(LDFLAGS) -lcppcoro
 LDFLAGS_LIBMPROMPT  :=  -L${DEPS_DIR}/libmprompt/out $(LDFLAGS) -lmprompt -lmpeff -lpthread
-LDFLAGS_LIBHANDLER  := -L${DEPS_DIR}/libhandler/out/${CC}-amd64-pc-linux-gnu/${BUILD} $(LDFLAGS) -lhandler
+LDFLAGS_LIBHANDLER   = -L${DEPS_DIR}/libhandler/out/$(shell cat ${LIBHANDLER_CONFIG_NAME})/${BUILD} $(LDFLAGS) -lhandler
 LDFLAGS_CPP-EFFECTS := $(LDFLAGS) -lboost_context
 
 .PHONY: all clean libmprompt
@@ -104,12 +104,16 @@ libmprompt:
 	cmake ../ -DCMAKE_C_COMPILER=${CC} -DCMAKE_CXX_COMPILER=${CXX} -DMP_USE_C=ON; \
 	make
 
-LIBHANDLER_LIB := ${DEPS_DIR}/libhandler/out/${CC}-amd64-pc-linux-gnu/${BUILD}/libhandler.a
+# Configure for target: clang, amd64-unknown-linux-gnu
+LIBHANDLER_CONFIG_NAME := ${DEPS_DIR}/libhandler/out/config.txt
+LIBHANDLER_LIB = ${DEPS_DIR}/libhandler/out/$(shell cat ${LIBHANDLER_CONFIG_NAME})/${BUILD}/libhandler.a
 
 $(LIBHANDLER_LIB):
-	cd ${DEPS_DIR}/libhandler; ./configure --cc=${CC} --cxx=${CXX}
+	cd ${DEPS_DIR}/libhandler; \
+	./configure --cc=${CC} --cxx=${CXX} | awk '/Configure for target:/ { printf "%s-%s\n", substr($$4, 1, length($$4)-1), $$5 }' > ${DEPS_DIR}/libhandler/tmp_config.txt
 	$(MAKE) VARIANT=${BUILD} -C ${DEPS_DIR}/libhandler depend
 	$(MAKE) VARIANT=${BUILD} -C ${DEPS_DIR}/libhandler
+	mv ${DEPS_DIR}/libhandler/tmp_config.txt ${DEPS_DIR}/libhandler/out/config.txt
 
 PICOHTTP_LIB := ${DEPS_DIR}/picohttpparser/build/picohttpparser.a
 
