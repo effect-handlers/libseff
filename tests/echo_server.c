@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "mvar_stdio.h"
 #include "net.h"
 #include "scheff.h"
 #include "seff.h"
@@ -19,7 +20,7 @@
 #define BUF_SIZE 256
 
 #ifndef NDEBUG
-#define conn_report(msg, ...) printf("[connection %d]: " msg, connection_id, ##__VA_ARGS__)
+#define conn_report(msg, ...) mvar_printf("[connection %d]: " msg, connection_id, ##__VA_ARGS__)
 #else
 #define conn_report(msg, ...)
 #endif

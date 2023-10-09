@@ -14,16 +14,11 @@
 #include <unistd.h>
 
 #include "http_response.h"
+#include "mvar_stdio.h"
 #include "net.h"
 #include "picohttpparser.h"
 #include "scheff.h"
 #include "seff.h"
-
-#ifndef NDEBUG
-#define deb_log(msg, ...) printf(msg, ##__VA_ARGS__)
-#else
-#define deb_log(msg, ...)
-#endif
 
 #define conn_log(msg, ...) deb_log("[connection %d]: " msg, connection_id, ##__VA_ARGS__)
 
@@ -206,7 +201,7 @@ void *listener_fun(seff_coroutine_t *self, void *_arg) {
         printf("Cannot listen on %s:%s\n", args->ip, args->port);
         return (void *)-1;
     }
-    printf("Open socket %d listening on %s:%s\n", socket_fd, args->ip, args->port);
+    mvar_printf("Open socket %d listening on %s:%s\n", socket_fd, args->ip, args->port);
 
     deb_log("Listening for connections\n");
 
