@@ -1,25 +1,26 @@
 #include "chameneos_effect.h"
 
-void execute(size_t meetings, colour* creatures, size_t creaturesSize){
+void execute(size_t meetings, colour *creatures, size_t creaturesSize) {
     // Print the colours
     for (int i = 0; i < creaturesSize; ++i) {
         printf("%s ", colourNames[creatures[i]]);
     }
     printf("\n");
 
-    seff_coroutine_t** chms = calloc(creaturesSize, sizeof(seff_coroutine_t*));
-    seff_eff_t ** reqs = calloc(creaturesSize, sizeof(seff_eff_t *));
-    chameneos_init_effect_t* inits = calloc(creaturesSize, sizeof(chameneos_init_effect_t));
+    seff_coroutine_t **chms = calloc(creaturesSize, sizeof(seff_coroutine_t *));
+    seff_eff_t **reqs = calloc(creaturesSize, sizeof(seff_eff_t *));
+    chameneos_init_effect_t *inits = calloc(creaturesSize, sizeof(chameneos_init_effect_t));
 
-    for (size_t i = 0; i < creaturesSize; ++i){
+    for (size_t i = 0; i < creaturesSize; ++i) {
         inits[i].self = i;
         inits[i].col = creatures[i];
-        chms[i] = seff_coroutine_new(chameneos, (void*)&inits[i]);
+        chms[i] = seff_coroutine_new(chameneos, (void *)&inits[i]);
         // First resume, we assume it's not expecting anything
         reqs[i] = seff_handle(chms[i], (void *)NULL, HANDLES(meet));
     }
 
-    // This takes advantage of this problem structure, not really fair, but for experimental purposes
+    // This takes advantage of this problem structure, not really fair, but for experimental
+    // purposes
     size_t next = 0;
 
     for (size_t i = 0; i < meetings; i++) {
@@ -58,11 +59,10 @@ void execute(size_t meetings, colour* creatures, size_t creaturesSize){
         meetMsg.chameneos = chameneosA;
         meetMsg.col = colA;
         reqs[b] = seff_handle(chms[b], (void *)&meetMsg, HANDLES(meet));
-
     }
 
     uint64_t total_meetings = 0;
-    for (size_t i = 0; i < creaturesSize; ++i){
+    for (size_t i = 0; i < creaturesSize; ++i) {
         chameneos_meet_t meetMsg;
         meetMsg.finish = true;
         // First resume
@@ -74,7 +74,7 @@ void execute(size_t meetings, colour* creatures, size_t creaturesSize){
     return;
 }
 
-int main(){
+int main() {
     print_complements();
     printf("\n");
 
