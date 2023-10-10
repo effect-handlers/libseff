@@ -66,3 +66,6 @@ decls/__pycache__
 
 # GDB History
 .gdb_history
+
+# Python venvs
+.venvs/
