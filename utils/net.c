@@ -19,16 +19,19 @@
 #include <net.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/epoll.h>
+#include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "scheduler.h"
+#include "scheff.h"
 
 #ifndef NDEBUG
-#define deb_log(msg, ...) threadsafe_printf(msg, ##__VA_ARGS__)
+#define deb_log(msg, ...) printf(msg, ##__VA_ARGS__)
 #else
 #define deb_log(msg, ...)
 #endif
@@ -114,6 +117,33 @@ int listen_tcp_socket(const char *ip, const char *port, bool non_blocking, bool 
     return listener;
 }
 
+/* Note that all of these are fully identical to the corresponding both POLL and EPOLL events */
+typedef enum : uint32_t {
+    READ = POLLIN,
+    WRITE = POLLOUT,
+    HANGUP = POLLHUP,
+    ERROR = POLLERR,
+    ET = EPOLLET
+} event_t;
+
+bool poll_await_condition(void *_arg) {
+    struct pollfd *arg = (struct pollfd *)_arg;
+    assert(arg->fd >= 0);
+    return poll(arg, 1, 0);
+}
+
+short poll_await(int fd, uint32_t awaiting_events) {
+    // Only valid with epoll
+    assert(!(awaiting_events & EPOLLET));
+    struct pollfd polls;
+    polls.events = (short)awaiting_events;
+    polls.fd = fd;
+
+    scheff_poll(poll_await_condition, (void *)&polls);
+
+    return polls.revents;
+}
+
 int await_accept4(int socket_fd) {
     // it is assumed that the socket is non blocking
 #ifndef NDEBUG
@@ -132,7 +162,8 @@ int await_accept4(int socket_fd) {
         }
     }
 
-    event_t revents = PERFORM(await, socket_fd, READ | ET);
+    // This should be EPOLLET, but we're using poll now
+    short revents = poll_await(socket_fd, READ);
     if (HANGUP & revents)
         return 0;
     if (!(READ & revents))
@@ -157,7 +188,8 @@ int await_recv(int conn_fd, char *buffer, size_t bufsz) {
             return n_read;
         }
     }
-    event_t revents = PERFORM(await, conn_fd, READ | ET);
+    // This should be EPOLLET, but we're using poll now
+    short revents = poll_await(conn_fd, READ);
     if (HANGUP & revents)
         return 0;
     if (!(READ & revents))
@@ -180,7 +212,7 @@ int await_send(int conn_fd, const char *buffer, size_t bufsz) {
             return n_read;
         }
     }
-    event_t revents = PERFORM(await, conn_fd, WRITE);
+    short revents = poll_await(conn_fd, WRITE);
     if (HANGUP & revents)
         return 0;
     if (!(WRITE & revents))

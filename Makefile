@@ -74,14 +74,14 @@ output/seff_mem_asm.o: src/mem/seff_mem_${STACK_POLICY}.S | output
 	$(CC) $(CFLAGS) -I./src -o output/seff_mem_asm.o -c src/mem/seff_mem_${STACK_POLICY}.S
 
 
-output/actors.o: src/seff.h src/seff_types.h utils/scheduler.h utils/actors.h utils/actors.c | output/lib
-	$(CC) $(CFLAGS) -I./src -I./utils -o output/actors.o -c utils/actors.c
+output/actors.o: src/seff.h src/seff_types.h scheduler/scheff.h utils/actors.h utils/actors.c | output/lib
+	$(CC) $(CFLAGS) -I./src -I./utils -I./scheduler -o output/actors.o -c utils/actors.c
 
 output/cl_queue.o: utils/cl_queue.h utils/cl_queue.c | output/lib
 	$(CC) $(CFLAGS) -I./utils -o output/cl_queue.o -c utils/cl_queue.c
 
 output/net.o: utils/net.c utils/net.h | output/lib
-	$(CC) $(CFLAGS) -I./src -I./utils -o $@ -c $<
+	$(CC) $(CFLAGS) -I./src -I./utils -I./scheduler -o $@ -c $<
 
 output/http_response.o: utils/http_response.c utils/http_response.h | output/lib
 	$(CC) $(CFLAGS) -o $@ -c $<
@@ -96,8 +96,8 @@ output/scheff.o: scheduler/scheff.h scheduler/scheff.c | output/lib
 	$(CC) $(CFLAGS) -I./src -I./utils -o output/scheff.o -c scheduler/scheff.c
 
 output/tests/%: tests/%.c output/lib/libutils.a output/lib/libseff.a | output/tests
-	$(CC) $(CFLAGS) -I./src -I./utils -o $@.o -c $<
-	$(CC) $(CFLAGS) -I./src -I./utils -o $@ $@.o output/lib/libseff.a output/lib/libutils.a $(LDFLAGS)
+	$(CC) $(CFLAGS) -I./src -I./utils -I./scheduler -o $@.o -c $<
+	$(CC) $(CFLAGS) -I./src -I./utils -I./scheduler -o $@ $@.o output/lib/libutils.a output/lib/libseff.a $(LDFLAGS)
 
 output/tests/%: tests/%.cpp output/lib/libutils.a output/lib/libseff.a | output/tests
 	$(CXX) $(CXXFLAGS) -I./src -o $@.o -c $<
@@ -146,5 +146,5 @@ clean:
 output/lib/libseff.a: output/seff_mem.o output/seff_mem_asm.o output/seff.o output/seff_asm.o | output/lib
 	ar -rcs output/lib/libseff.a output/seff_mem.o output/seff_mem_asm.o output/seff.o output/seff_asm.o
 
-output/lib/libutils.a: output/actors.o output/cl_queue.o output/tk_queue.o output/tl_queue.o output/scheff.o output/net.o output/http_response.o | output/lib
+output/lib/libutils.a: output/actors.o output/cl_queue.o output/tk_queue.o output/tl_queue.o output/scheff.o output/net.o output/http_response.o  | output/lib
 	ar -rcs $@ $^

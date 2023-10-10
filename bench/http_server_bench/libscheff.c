@@ -16,13 +16,15 @@
 #include "http_response.h"
 #include "net.h"
 #include "picohttpparser.h"
+#include "scheff.h"
 #include "seff.h"
 
 #ifndef NDEBUG
-#define deb_log(msg, ...) threadsafe_printf(msg, ##__VA_ARGS__)
+#define deb_log(msg, ...) printf(msg, ##__VA_ARGS__)
 #else
 #define deb_log(msg, ...)
 #endif
+
 #define conn_log(msg, ...) deb_log("[connection %d]: " msg, connection_id, ##__VA_ARGS__)
 
 const char *RESPONSE_TEXT =
@@ -204,7 +206,7 @@ void *listener_fun(seff_coroutine_t *self, void *_arg) {
         printf("Cannot listen on %s:%s\n", args->ip, args->port);
         return (void *)-1;
     }
-    threadsafe_printf("Open socket %d listening on %s:%s\n", socket_fd, args->ip, args->port);
+    printf("Open socket %d listening on %s:%s\n", socket_fd, args->ip, args->port);
 
     deb_log("Listening for connections\n");
 
@@ -216,7 +218,7 @@ void *listener_fun(seff_coroutine_t *self, void *_arg) {
             break;
         }
         deb_log("Got connection\n");
-        PERFORM(fork, connection_fun, (void *)(uintptr_t)connection_fd);
+        scheff_fork(connection_fun, (void *)(uintptr_t)connection_fd);
     }
 
     close_syscall_wrapper(socket_fd);
@@ -254,9 +256,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    scheduler_t scheduler;
-    scheduler_init(&scheduler, n_threads, TASK_QUEUE_SIZE);
+    scheff_t scheduler;
+    scheff_init(&scheduler, n_threads);
     printf("Initialized scheduler with %d threads\n", n_threads);
+
     listener_args l_args;
     l_args.ip = ip;
     l_args.port = port;
@@ -264,15 +267,16 @@ int main(int argc, char *argv[]) {
         // schedule a listener function to each thread
         // TODO these listeners can be moved around, should we be able to fix them to a particular
         // thread?
-        scheduler_schedule(&scheduler, listener_fun, (void *)&l_args, i);
+        if (!scheff_schedule(&scheduler, listener_fun, (void *)&l_args)) {
+            printf("Something went wrong when scheduling the main task!\n");
+            exit(1);
+        }
     }
 
-    scheduler_start(&scheduler);
+    scheff_run(&scheduler);
 
-    threadsafe_puts("Main idling");
-
-    scheduler_join(&scheduler);
-    scheduler_destroy(&scheduler);
-
+#ifndef NDEBUG
+    scheff_print_stats(&scheduler);
+#endif
     return 0;
 }
