@@ -30,15 +30,9 @@
 #define DEBUG_INFO(fmt, ...)
 #endif
 
-#define SEGMENT_OVERHEAD STACK_POLICY_SWITCH(sizeof(seff_stack_segment_t), 0, 0)
-
 extern __thread seff_coroutine_t *_seff_current_coroutine;
 
 void *seff_resume(seff_coroutine_t *k, void *arg) { return seff_handle(k, arg, ~0); }
-
-void *frame_rsp(seff_frame_ptr_t frame, size_t segment_size) {
-    return (char *)frame + SEGMENT_OVERHEAD + segment_size;
-}
 
 void frame_push(seff_cont_t *cont, void *elt) {
     cont->rsp = (char *)cont->rsp - sizeof(void *);
@@ -92,43 +86,39 @@ extern size_t default_frame_size;
 bool seff_coroutine_init(seff_coroutine_t *k, seff_start_fun_t *fn, void *arg) {
     return seff_coroutine_init_sized(k, fn, arg, default_frame_size);
 }
+
 bool seff_coroutine_init_sized(
     seff_coroutine_t *k, seff_start_fun_t *fn, void *arg, size_t frame_size) {
-    seff_frame_ptr_t stack = init_stack_frame(frame_size + SEGMENT_OVERHEAD);
+    char *rsp;
+    // Overhead needed by coroutine_prelude (since they make a call)
+    size_t overhead = 16;
+    seff_frame_ptr_t stack = init_stack_frame(frame_size + overhead, &rsp);
     if (!stack) {
         return false;
     }
     k->frame_ptr = stack;
-    k->resume_point.rsp = frame_rsp(stack, frame_size + SEGMENT_OVERHEAD);
+    k->resume_point.rsp = (void *)rsp;
     k->resume_point.rbp = NULL;
     k->resume_point.ip = (void *)coroutine_prelude;
 #ifdef STACK_POLICY_SEGMENTED
-    void *stack_top = (char *)stack + SEGMENT_OVERHEAD;
+    void *stack_top = rsp - frame_size - overhead;
     k->resume_point.stack_top = stack_top;
 #endif
     k->resume_point.current_coroutine = k;
     k->resume_point.rbx = (void *)0xcacabbbb;
     k->resume_point.r12 = (void *)0xcaca1212;
-    k->resume_point.r13 = (void *)0xcaca1313;
-    k->resume_point.r14 = (void *)0xcaca1414;
-    k->resume_point.r15 = (void *)0xcaca1515;
+    k->resume_point.r13 = (void *)k;
+    k->resume_point.r14 = (void *)arg;
+    k->resume_point.r15 = (void *)fn;
     k->state = PAUSED;
 
     /*
      * Padding to ensure the stack address is 16-byte aligned
      * This is necessary depending on the stack layout because the
      * x86-64 ABI mandates a 16-byte aligned stack
-     * It may seem counter-intuitive that we pad until RSP is *misaligned*
-     * by 8 bytes but the first instruction inside the coroutine function
-     * will be a PUSHQ RBP, so we want (RSP%16 == 8) immediately before
-     * starting the coroutine function
      */
-    size_t pad = (8 - ((uintptr_t)k->resume_point.rsp) % 16) % 16;
+    size_t pad = ((uintptr_t)k->resume_point.rsp) % 16;
     k->resume_point.rsp = ((char *)k->resume_point.rsp) - pad;
-
-    frame_push(&k->resume_point, (void *)fn);
-    frame_push(&k->resume_point, arg);
-    frame_push(&k->resume_point, k);
 
     assert(((uintptr_t)k->resume_point.rsp) % 16 == 0);
 

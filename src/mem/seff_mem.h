@@ -26,6 +26,8 @@
 #endif
 
 // TODO: this module should also be responsible for deleting stack frames
-E __attribute__((no_split_stack)) seff_frame_ptr_t init_stack_frame(size_t frame_size);
+// Given a frame size and a pointer to the rsp, return the new stack frame, and modify rsp so that
+// it points to the top of the stack
+E __attribute__((no_split_stack)) seff_frame_ptr_t init_stack_frame(size_t frame_size, char **rsp);
 
 #endif

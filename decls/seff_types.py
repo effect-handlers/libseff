@@ -1,13 +1,13 @@
-# 
+#
 # Copyright (c) 2023 Huawei Technologies Co., Ltd.
-# 
+#
 # libseff is licensed under Mulan PSL v2.
-# You can use this software according to the terms and conditions of the Mulan PSL v2. 
+# You can use this software according to the terms and conditions of the Mulan PSL v2.
 # You may obtain a copy of Mulan PSL v2 at:
-# 	    http://license.coscl.org.cn/MulanPSL2 
+# 	    http://license.coscl.org.cn/MulanPSL2
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
-# FIT FOR A PARTICULAR PURPOSE.  
+# FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
 #
 # libseff declarations that will be used by both C and assembly components
@@ -34,7 +34,7 @@ args = parser.parse_args()
 if args.sequence_counters:
     print(f"Fatal error: --sequence-counters not implemented yet")
     exit()
-    
+
 if args.arch == x86_64:
     arch = Architecture(64)
     generate.arch = arch
@@ -71,7 +71,7 @@ cont_fields = [
 
     Field('rsp', ptr(void)),
     Field('rbp', ptr(void)),
-              
+
     Field('ip', ptr(void)),
     Field('rbx', ptr(void)),
     Field('r12', ptr(void)),
