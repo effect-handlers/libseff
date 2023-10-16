@@ -20,10 +20,7 @@ from glob import glob
 from typing import Set,Tuple
 
 excluded_tests = {
-    './output/tests/echo_server_epoll',
-    './output/tests/echo_server_simple',
-    './output/tests/echo_server_work_spilling',
-    './output/tests/echo_server_work_stealing',
+    './output/tests/echo_server',
     './output/tests/many_threads'
 }
 

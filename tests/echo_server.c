@@ -65,20 +65,20 @@ void *connection_fun(seff_coroutine_t *self, void *_arg) {
 void *listener_fun(seff_coroutine_t *self, void *_arg) {
     int socket_fd = (int)(uintptr_t)_arg;
 #ifndef NDEBUG
-    mvar_puts("Listening for connections\n");
+    printf("Listening for connections\n");
 #endif
 
     while (true) {
         int connection_fd = await_accept4(socket_fd);
         if (connection_fd == -1) {
 #ifndef NDEBUG
-            mvar_puts("Error while listening for connection -- did the "
-                      "OS kill the socket?\n");
+            printf("Error while listening for connection -- did the "
+                   "OS kill the socket?\n");
 #endif
             break;
         }
 #ifndef NDEBUG
-        mvar_puts("Got connection\n");
+        printf("Got connection\n");
 #endif
         scheff_fork(connection_fun, (void *)(uintptr_t)connection_fd);
     }
