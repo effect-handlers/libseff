@@ -54,7 +54,11 @@ seff_stack_segment_t *init_segment(size_t frame_size) {
     return segment;
 }
 
-seff_frame_ptr_t init_stack_frame(size_t frame_size) { return init_segment(frame_size); }
+seff_frame_ptr_t init_stack_frame(size_t frame_size, char **rsp) {
+    seff_frame_ptr_t ret = init_segment(frame_size);
+    *rsp = (char *)ret + sizeof(seff_stack_segment_t) + ret->size;
+    return ret;
+}
 
 #define ATTRS __attribute__((no_split_stack, visibility("hidden"), flatten))
 
