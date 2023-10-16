@@ -183,14 +183,16 @@ seff_handle_after_store_system_stack:
     .cfi_endproc
 .size seff_handle, . - seff_handle
 
-# void coroutine_prelude(void);
+# void coroutine_prelude(seff_coroutine_t *k, seff_start_fun_t *fn, void *arg);
+# k in r13
+# arg in r14
+# fn in r15
 coroutine_prelude:
     .cfi_startproc
     .cfi_signal_frame           # needed or else gdb does not allow switching frames to a lower address in the backtrace
 
-    popq %rdi
     # At this point we are already at a new stack frame, we need to recover the CFA from rdi
-    .cfi_escape DW_CFA_def_cfa_expression, 2, DW_OP_breg(DW_REG_rdi), seff_coroutine_t__resume_point
+    .cfi_escape DW_CFA_def_cfa_expression, 2, DW_OP_breg(DW_REG_r13), seff_coroutine_t__resume_point
     # And then every other register from its offset to CFA
     .cfi_offset rip, seff_cont_t__ip
     .cfi_offset rbx, seff_cont_t__rbx
@@ -201,16 +203,14 @@ coroutine_prelude:
     .cfi_offset r14, seff_cont_t__r14
     .cfi_offset r15, seff_cont_t__r15
 
-    popq %rsi
-    popq %rdx
-    push %rdi # we need this push for alignment reasons anyway
+    movq %r13, %rdi
+    movq %r14, %rsi
     # Since rdi is a scratch register, from now our CFA relates to some position in memory
     # Note that this instruction is executed when unwinding from below this line, with whatever $rdi
     # has at that moment
-    .cfi_escape DW_CFA_def_cfa_expression, 5, DW_OP_breg(DW_REG_rsp), 0, DW_OP_deref, DW_OP_plus_uconst, seff_coroutine_t__resume_point
 
-    call *%rdx
-    pop %rdi
+    call *%r15
+    movq %r13, %rdi
     # FALLTHROUGH TO SEFF_RETURN
     movq %rax, %rsi
     .cfi_endproc

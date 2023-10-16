@@ -25,7 +25,7 @@
 #define DEFAULT_DEFAULT_FRAME_SIZE 8 * 1024
 #include "seff_mem_common.h"
 
-seff_frame_ptr_t init_stack_frame(size_t frame_size) {
+seff_frame_ptr_t init_stack_frame(size_t frame_size, char **rsp) {
     seff_frame_ptr_t frame = malloc(frame_size);
 
     if (!frame) {
@@ -38,5 +38,7 @@ seff_frame_ptr_t init_stack_frame(size_t frame_size) {
         ptr[i] = 0x13;
     }
 #endif
+
+    *rsp = (char *)frame + frame_size;
     return frame;
 }
