@@ -213,6 +213,7 @@ void *scheff_worker_thread(void *_self) {
             debug(self->return_requests++);
             FINALIZE(current_task);
         } else {
+            current_task->res = request->resumption;
             switch (request->id) {
                 CASE_EFFECT(request, fork, {
                     debug(self->fork_requests++);
@@ -225,6 +226,7 @@ void *scheff_worker_thread(void *_self) {
                         &new_task->coroutine, payload.fn, payload.arg, STACK_SIZE);
                     new_task->poll_condition = NULL;
                     new_task->poll_arg = NULL;
+                    new_task->res = seff_coroutine_start(&new_task->coroutine);
                     debug(new_task->id = RELAXED(fetch_add, &self->scheduler->task_counter, 1));
 
                     ENQUEUE(current_task);
