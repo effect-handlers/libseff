@@ -103,45 +103,52 @@ E void *seff_resume(seff_resumption_t res, void *arg);
 #define EFF_RET_T(name) __##name##_eff_ret
 #define HANDLES(name) (1 << EFF_ID(name))
 
-#define CASE_EFFECT(request, name, block)                                             \
-    case __##name##_eff_id: {                                                         \
-        __##name##_eff_payload payload = *(__##name##_eff_payload *)request->payload; \
-        (void)payload;                                                                \
-        block                                                                         \
+#define CASE_EFFECT(request, name, block)                                       \
+    case EFF_ID(name): {                                                        \
+        EFF_PAYLOAD_T(name) payload = *(EFF_PAYLOAD_T(name) *)request->payload; \
+        (void)payload;                                                          \
+        block                                                                   \
+    }
+
+#define IF_EFFECT(request, eff, block)                                        \
+    if (request->eff_id == EFF_ID(eff)) {                                     \
+        EFF_PAYLOAD_T(eff) payload = *(EFF_PAYLOAD_T(eff) *)request->payload; \
+        (void)payload;                                                        \
+        block                                                                 \
     }
 
 #define DEFINE_EFFECT(name, id, ret_val, payload) \
-    typedef ret_val __##name##_eff_ret;           \
-    static const int64_t __##name##_eff_id = id;  \
-    typedef struct payload __##name##_eff_payload
+    typedef ret_val EFF_RET_T(name);              \
+    static const int64_t EFF_ID(name) = id;       \
+    typedef struct payload EFF_PAYLOAD_T(name)
 
-#define PERFORM(name, ...)                                                           \
-    ({                                                                               \
-        __##name##_eff_payload __payload = {__VA_ARGS__};                            \
-        (__##name##_eff_ret)(uintptr_t) seff_perform(__##name##_eff_id, &__payload); \
+#define PERFORM(name, ...)                                                   \
+    ({                                                                       \
+        EFF_PAYLOAD_T(name) __payload = {__VA_ARGS__};                       \
+        (EFF_RET_T(name))(uintptr_t) seff_perform(EFF_ID(name), &__payload); \
     })
 
 #ifndef NDEBUG
-#define PERFORM_DIRECT(coroutine, name, ...)                               \
-    ({                                                                     \
-        __##name##_eff_payload __payload = {__VA_ARGS__};                  \
-        seff_eff_t __request = {__##name##_eff_id, &__payload};            \
-        assert((coroutine->handled_effects & (HANDLES(name))));            \
-        (__##name##_eff_ret)(uintptr_t) seff_yield(coroutine, &__request); \
+#define PERFORM_DIRECT(coroutine, name, ...)                            \
+    ({                                                                  \
+        EFF_PAYLOAD_T(name) __payload = {__VA_ARGS__};                  \
+        seff_eff_t __request = {EFF_ID(name), &__payload};              \
+        assert((coroutine->handled_effects & (HANDLES(name))));         \
+        (EFF_RET_T(name))(uintptr_t) seff_yield(coroutine, &__request); \
     })
 #else
-#define PERFORM_DIRECT(coroutine, name, ...)                               \
-    ({                                                                     \
-        __##name##_eff_payload __payload = {__VA_ARGS__};                  \
-        seff_eff_t __request = {__##name##_eff_id, &__payload};            \
-        (__##name##_eff_ret)(uintptr_t) seff_yield(coroutine, &__request); \
+#define PERFORM_DIRECT(coroutine, name, ...)                            \
+    ({                                                                  \
+        EFF_PAYLOAD_T(name) __payload = {__VA_ARGS__};                  \
+        seff_eff_t __request = {EFF_ID(name), &__payload};              \
+        (EFF_RET_T(name))(uintptr_t) seff_yield(coroutine, &__request); \
     })
 #endif
 
-#define THROW(name, ...)                                  \
-    ({                                                    \
-        __##name##_eff_payload __payload = {__VA_ARGS__}; \
-        seff_throw(__##name##_eff_id, &__payload);        \
+#define THROW(name, ...)                               \
+    ({                                                 \
+        EFF_PAYLOAD_T(name) __payload = {__VA_ARGS__}; \
+        seff_throw(EFF_ID(name), &__payload);          \
     })
 
 #endif

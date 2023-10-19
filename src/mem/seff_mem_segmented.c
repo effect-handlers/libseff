@@ -49,7 +49,7 @@ seff_stack_segment_t *init_segment(size_t frame_size) {
     segment->prev = NULL;
     segment->next = NULL;
     segment->size = frame_size;
-    segment->canary = (void *)0x999999999999;
+    segment->canary = (void *)0x9999999999999999;
 
     return segment;
 }
@@ -62,10 +62,15 @@ seff_frame_ptr_t init_stack_frame(size_t frame_size, char **rsp) {
 
 #define ATTRS __attribute__((no_split_stack, visibility("hidden"), flatten))
 
-/* Internal seff_mem functions called by the runtime */
+/*
+ * Internal seff_mem functions called by the runtime.
+ * These must *only* be called by __morestack.
+ */
 ATTRS void *seff_mem_allocate_frame(size_t *frame_size, void *old_stack, size_t param_size);
-ATTRS void *seff_mem_release_frame(void);
+ATTRS void seff_mem_release_frame(void);
 
+#define SET_STACK_TOP(arg) __asm__("movq %0, %%fs:0x70" : : "r"(arg))
+#define SEGMENT_STACK_TOP(frame) ((char *)frame + sizeof(seff_stack_segment_t))
 #define LINK(first, second)   \
     {                         \
         first->next = second; \
@@ -96,6 +101,7 @@ void *seff_mem_allocate_frame(size_t *pframe_size, void *old_stack, size_t param
 
     _seff_current_coroutine->frame_ptr = new_segment;
     *pframe_size = new_segment->size - param_size;
+    SET_STACK_TOP(SEGMENT_STACK_TOP(new_segment));
 
     /*
      * Align the returned stack to a 16-byte boundary.
@@ -113,11 +119,10 @@ void *seff_mem_allocate_frame(size_t *pframe_size, void *old_stack, size_t param
     return new_stack;
 }
 
-void *seff_mem_release_frame(void) {
+void seff_mem_release_frame(void) {
     seff_stack_segment_t *current = _seff_current_coroutine->frame_ptr;
     _seff_current_coroutine->frame_ptr = current->prev;
-    void *stack_top = (char *)current->prev + sizeof(seff_stack_segment_t);
-    return stack_top;
+    SET_STACK_TOP(SEGMENT_STACK_TOP(current->prev));
 }
 
 typedef struct {

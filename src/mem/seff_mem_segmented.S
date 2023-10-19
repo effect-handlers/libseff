@@ -86,7 +86,7 @@ __morestack:
     movq %rsp, %rbp
 
     # Save registers -- TODO: reduce!
-    pushq %r10 # Frame size -- NO BACKOFF
+    pushq %r10 # Frame size -- NO BACKOFF, probably no longer necessary
     pushq %rax
     pushq %rdi
     pushq %rsi
@@ -112,13 +112,8 @@ __morestack:
 
     call seff_mem_allocate_frame
 
-    # New frame size goes to %r10
-    movq -8(%rbp), %r10
-
-    # Switch to new stack, update STACK_TOP
+    # Switch to new stack, STACK_TOP must have been updated when allocating the frame
     movq %rax, %rsp
-    subq %r10, %rax
-    movq %rax, SEFF_STACK_TOP
 
     # Restore registers -- TODO: reduce!
     movq -16(%rbp),%rax
@@ -141,7 +136,7 @@ __morestack:
     pushq %rdx
 
     call seff_mem_release_frame
-    movq %rax, SEFF_STACK_TOP
+    # We expect SEFF_STACK_TOP to have been updated by seff_mem_release_frame
 
     popq %rdx
     popq %rax
