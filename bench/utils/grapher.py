@@ -21,7 +21,15 @@ styles = {
         'color': 'red',
         'marker': 'o',
         'alpha': 1.0,
-        'zorder': 10 # so libseff is at the front
+        'zorder': 10, # so libseff is at the front
+        'scalex': 'linear'
+    },
+    'libscheff': {
+        'color': 'red',
+        'marker': 'o',
+        'alpha': 1.0,
+        'zorder': 10, # so libseff is at the front
+        'scalex': 'linear'
     }
 }
 
@@ -35,24 +43,26 @@ def getStyle(label):
             'color': next(colours),
             'marker': next(markers),
             'alpha': 0.5,
-            'zorder': 0
+            'zorder': 0,
+            'scalex': 'linear'
         }
         styles[label] = newStyle
 
     return styles[label]
 
 
-def grapher(results, ax=plt):
+def grapher(results, ax=plt, parameter_name = None):
 
-    parameter_name = getParamName(results)
+    if not parameter_name:
+        parameter_name = getParamName(results)
 
     groups = groupByLabel(results)
 
 
     for (label, g) in groups.items():
 
-        zipped = [(r['parameters'][parameter_name], r['measurement']) for r in g]
-        zipped = sorted(zipped, key=lambda x: x[0])
+        zipped = [(r['parameters'][parameter_name], float(r['measurement'])) for r in g]
+        zipped = sorted(zipped, key=lambda x: float(x[0]))
         unzipped = list(zip(*zipped))
         style = getStyle(label)
         ax.plot(unzipped[0], unzipped[1], label=label, **style)

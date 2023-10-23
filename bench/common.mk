@@ -78,6 +78,7 @@ clean_deps:
 	rm -rf ${DEPS_DIR}/cppcoro/build
 	$(MAKE) -C ${DEPS_DIR}/libhandler clean
 	rm -rf ${DEPS_DIR}/picohttpparser/build
+	$(MAKE) -C ${DEPS_DIR}/wrk2 clean
 
 ${DEPS_DIR}/cppcoro/tools/cake/src/run.py:
 	git submodule update --init --recursive
@@ -125,3 +126,8 @@ ${DEPS_DIR}/picohttpparser/build/picohttpparser.o: ${DEPS_DIR}/picohttpparser/pi
 
 $(PICOHTTP_LIB): ${DEPS_DIR}/picohttpparser/build/picohttpparser.o | ${DEPS_DIR}/picohttpparser/build
 	llvm-ar-12 -rcs $@ $<
+
+WRK := ${DEPS_DIR}/wrk2/wrk
+
+$(WRK): ${DEPS_DIR}/wrk2
+	$(MAKE) -C $<

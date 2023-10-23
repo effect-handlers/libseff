@@ -123,5 +123,5 @@ done = function(summary, latency, requests)
     --       io.write("\t\t},\n")
     --   end
    end
-   io.write("\t]\n}\n")
+   io.write("\t}\n}\n")
 end
