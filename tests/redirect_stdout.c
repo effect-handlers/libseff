@@ -15,7 +15,6 @@ void *default_print(void *_arg) {
     return NULL;
 }
 
-extern size_t default_frame_size;
 void *with_output_to_buffer(seff_start_fun_t *fn, void *arg, char *buffer) {
     seff_coroutine_t k;
     seff_coroutine_init(&k, fn, arg);

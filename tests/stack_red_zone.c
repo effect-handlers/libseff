@@ -24,7 +24,7 @@ __asm__("fn:"
         "movq $0xFFFFFFFFFFFFFFFF, -0x80(%rsp);"
         "movq $0xFFFFFFFFFFFFFFFF, -0x88(%rsp);"
         // This one touches the canary
-        // "movq $0xFFFFFFFF, -0x8D(%rsp);"
+        //"movq $0xFFFFFFFFFFFFFFFF, -0x90(%rsp);"
 
         "movq %rsp, %rax;"
         "ret;");
@@ -32,8 +32,8 @@ __asm__("fn:"
 int main(void) {
     seff_coroutine_t *k = seff_coroutine_new_sized(fn, NULL, 0);
     k->frame_ptr->canary = (void *)0x0;
-
-    seff_resume(k, NULL);
+    seff_resumption_t r = seff_coroutine_start(k);
+    seff_resume(r, NULL);
 
     return (uintptr_t)k->frame_ptr->canary;
 }

@@ -60,7 +60,7 @@ static inline void *seff_perform(effect_id eff_id, void *payload) {
     seff_coroutine_t *handler = seff_locate_handler(eff_id);
     if (handler) {
         seff_resumption_t res = (seff_resumption_t){handler, handler->sequence};
-        seff_eff_t e = (seff_eff_t){eff_id, res};
+        seff_eff_t e = (seff_eff_t){eff_id, res, payload};
         return seff_yield(handler, &e);
     } else {
         // Execute the handler in-place, since default handlers
