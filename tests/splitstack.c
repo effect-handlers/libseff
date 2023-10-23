@@ -133,11 +133,11 @@ __attribute__((optnone, noinline)) int int_printf(const char *fmt, uint64_t str)
     return printf(fmt, str);
 }
 
-#define RUN_TEST_ARGS(test, result, ...)                     \
+#define RUN_TEST_ARGS(test, result, ...)                         \
     do {                                                         \
         str_printf("Running test %s ", #test);                   \
-        str_printf("with args (%s)\n", #__VA_ARGS__);                   \
-        uint64_t res = test(__VA_ARGS__);                               \
+        str_printf("with args (%s)\n", #__VA_ARGS__);            \
+        uint64_t res = test(__VA_ARGS__);                        \
         if (res != result) {                                     \
             int_printf("    Result %d", res);                    \
             int_printf(" different than expected %d\n", result); \
@@ -145,11 +145,11 @@ __attribute__((optnone, noinline)) int int_printf(const char *fmt, uint64_t str)
         }                                                        \
     } while (0);
 
-#define RUN_TEST_ARGS_STACK(test, result, ...)                    \
+#define RUN_TEST_ARGS_STACK(test, result, ...)                        \
     do {                                                              \
         str_printf("Running test %s ", #test);                        \
-        str_printf("with args (%s)\n", #__VA_ARGS__);                        \
-        struct StackRetVals res = test(__VA_ARGS__);                         \
+        str_printf("with args (%s)\n", #__VA_ARGS__);                 \
+        struct StackRetVals res = test(__VA_ARGS__);                  \
         if (!eq_StackRetVals(res, result)) {                          \
             int_printf("    Result is different than expected\n", 0); \
             return (void *)1;                                         \
@@ -197,5 +197,7 @@ int main(void) {
     // We need to use a coroutine to force the use of segments,
     // otherwise it just uses the system stack
     seff_coroutine_t *k = seff_coroutine_new(tests, NULL);
-    return (int)(uintptr_t)seff_resume(k, NULL);
+    seff_request_t result = seff_resume(k, NULL);
+    assert(result.effect == EFF_ID(return));
+    return (int)(uintptr_t)result.payload;
 }

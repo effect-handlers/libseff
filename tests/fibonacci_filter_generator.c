@@ -11,10 +11,11 @@
     void *decorator_name(seff_coroutine_t *self, void *_args) {                      \
         decorator_name##_args args = *(decorator_name##_args *)_args;                \
         while (true) {                                                               \
-            void *next = seff_resume(args.base_generator, NULL);                     \
-            if (args.base_generator->state == FINISHED) {                            \
+            seff_request_t res = seff_resume(args.base_generator, NULL);             \
+            if (seff_finished(res)) {                                                \
                 return NULL;                                                         \
             } else {                                                                 \
+                void *next = res.payload;                                            \
                 decorator_behavior;                                                  \
             }                                                                        \
         }                                                                            \
@@ -24,7 +25,7 @@ void *fibonacci_generator(seff_coroutine_t *self, void *arg) {
     // The upper limit is passed to the coroutine as a void*
     int64_t a = 1, b = 0;
     while (true) {
-        seff_yield(self, (void *)a);
+        seff_yield(self, 0, (void *)a);
         int64_t tmp = a;
         a = a + b;
         b = tmp;
@@ -33,11 +34,11 @@ void *fibonacci_generator(seff_coroutine_t *self, void *arg) {
 
 MAKE_GENERATOR_DECORATOR(filter, bool (*predicate)(void *);, {
     if (args.predicate(next)) {
-        seff_yield(self, next);
+        seff_yield(self, 0, next);
     }
 })
 
-MAKE_GENERATOR_DECORATOR(map, void *(*fn)(void *);, { seff_yield(self, args.fn(next)); })
+MAKE_GENERATOR_DECORATOR(map, void *(*fn)(void *);, { seff_yield(self, 0, args.fn(next)); })
 
 void *twice(void *arg) { return (void *)(2 * (int64_t)arg); }
 
@@ -58,9 +59,12 @@ int main(void) {
 
     int64_t next_elt;
     for (int i = 0; i < 1000; i++) {
-        next_elt = (int64_t)seff_resume(filter_fib, NULL);
-        if (filter_fib->state == FINISHED)
+        seff_request_t req = seff_resume(filter_fib, fib);
+        if (seff_finished(req) == FINISHED) {
             break;
+        } else {
+            next_elt = (int64_t)req.payload;
+        }
     }
     printf("%ld\n", next_elt);
 }

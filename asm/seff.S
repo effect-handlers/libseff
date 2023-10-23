@@ -21,12 +21,12 @@
 #define SEFF_STACK_TOP %fs:0x70
 #endif
 
-.global seff_return
+.global seff_exit
 .global seff_yield
 .global seff_handle
 .global coroutine_prelude
 
-.type seff_return,%function
+.type seff_exit,%function
 .type seff_yield,%function
 .type seff_handle,%function
 .type coroutine_prelude,%function
@@ -90,7 +90,8 @@ _seff_paused_coroutine_stack_top:
 seff_yield:
     .cfi_startproc
     # self in %rdi
-    # arg in %rsi
+    # arg1 in %rsi
+    # arg2 in %rdx
 
     swap_registers
 
@@ -125,6 +126,7 @@ seff_yield:
     swap_stack
 
     movq %rsi, %rax
+    # second argument is already in %rdx
     jmp *%r10
     .cfi_endproc
 .size seff_yield, . - seff_yield
@@ -212,15 +214,19 @@ coroutine_prelude:
     call *%r15
     movq %r13, %rdi
     # FALLTHROUGH TO SEFF_RETURN
-    movq %rax, %rsi
+    # set the return value to (seff_result_t){ -1, %rax }
+    pushq %rax
+    movq $-1, %rsi
+    movq %rax, %rdx
     .cfi_endproc
 .size coroutine_prelude, . - coroutine_prelude
 
-# void seff_return(seff_coroutine_t* k, void* result)
-seff_return:
+# void seff_exit(seff_coroutine_t* k, void* result)
+seff_exit:
     .cfi_startproc
     # k in %rdi
-    # result in %rsi
+    # eff_id in %rsi
+    # result in %rdx
     movq $seff_coroutine_state_t__FINISHED, (seff_coroutine_t__state)(%rdi)
 
     # TODO: it would be faster to avoid swapping, since we're never restarting this coroutine
@@ -247,9 +253,10 @@ seff_return:
 #endif
 
     movq %rsi, %rax
+    # The effect id is already in %rdx, no need to move it
     jmp *%r10
     .cfi_endproc
-.size seff_return, . - seff_return
+.size seff_exit, . - seff_exit
 
 # This notes indicate that this file was compiled with split stack
 .section	.note.GNU-stack,"",@progbits

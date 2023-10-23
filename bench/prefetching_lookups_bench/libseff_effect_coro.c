@@ -36,25 +36,23 @@ long SegsEffectMultiLookup(
             task_t task = coro_queue_dequeue(&q);
             seff_coroutine_t *coro = task.coro;
             int64_t *toRead = task.extra;
-            seff_eff_t *request = seff_handle(
-                coro, toRead ? (void *)*toRead : NULL, HANDLES(deref));
-
-            if (coro->state == FINISHED) {
-                bool res = (bool) request ? 1 : 0;
-                found_count += res;
-                not_found_count += 1 - res;
-                seff_coroutine_delete(coro);
-                limit++;
-            } else {
-                switch (request->id) {
-                    CASE_EFFECT(request, deref, {
-                        prefetch_c((const char *)payload.addr);
-                        coro_queue_enqueue(&q, (task_t){coro, (void *)payload.addr});
-                        break;
-                    });
-                }
+            seff_request_t request =
+                seff_handle(coro, toRead ? (void *)*toRead : NULL, HANDLES(deref));
+            switch (request.effect) {
+                CASE_RETURN(request, {
+                    bool res = (bool)payload.result ? 1 : 0;
+                    found_count += res;
+                    not_found_count += 1 - res;
+                    seff_coroutine_delete(coro);
+                    limit++;
+                    break;
+                });
+                CASE_EFFECT(request, deref, {
+                    prefetch_c((const char *)payload.addr);
+                    coro_queue_enqueue(&q, (task_t){coro, (void *)payload.addr});
+                    break;
+                });
             }
-
         }
     }
 
@@ -63,23 +61,22 @@ long SegsEffectMultiLookup(
         task_t task = coro_queue_dequeue(&q);
         seff_coroutine_t *coro = task.coro;
         int64_t *toRead = task.extra;
-        seff_eff_t *request =
-            seff_handle(coro, toRead ? (void *)*toRead : NULL, HANDLES(deref));
+        seff_request_t request = seff_handle(coro, toRead ? (void *)*toRead : NULL, HANDLES(deref));
 
-        if (coro->state == FINISHED) {
-            bool res = (bool) request ? 1 : 0;
-            found_count += res;
-            not_found_count += 1 - res;
-            seff_coroutine_delete(coro);
-            limit++;
-        } else {
-            switch (request->id) {
-                CASE_EFFECT(request, deref, {
-                    prefetch_c((const char *)payload.addr);
-                    coro_queue_enqueue(&q, (task_t){coro, (void *)payload.addr});
-                    break;
-                });
-            }
+        switch (request.effect) {
+            CASE_RETURN(request, {
+                bool res = (bool)payload.result ? 1 : 0;
+                found_count += res;
+                not_found_count += 1 - res;
+                seff_coroutine_delete(coro);
+                limit++;
+                break;
+            });
+            CASE_EFFECT(request, deref, {
+                prefetch_c((const char *)payload.addr);
+                coro_queue_enqueue(&q, (task_t){coro, (void *)payload.addr});
+                break;
+            });
         }
     }
 

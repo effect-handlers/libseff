@@ -21,9 +21,11 @@ int main(void) {
     int reps = 3000;
     while (reps--) {
         seff_coroutine_t *k = seff_coroutine_new(fn, (void *)129); //(void *)(10 * 1000));
-        int64_t res = (int64_t)seff_resume(k, NULL);
 
-        printf("RES: %ld\n", res);
+        seff_request_t req = seff_resume(k, NULL);
+        assert(req.effect == EFF_ID(return));
+
+        printf("RES: %ld\n", (int64_t)req.payload);
         seff_coroutine_delete(k);
     }
 }

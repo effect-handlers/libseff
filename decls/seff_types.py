@@ -61,8 +61,8 @@ max_effects = Defn('MAX_EFFECTS', arch.word_type.size * 8)
 effect_set = Typedef('effect_set', arch.word_type)
 effect_id = Typedef('effect_id', arch.word_type)
 
-eff = Struct('seff_eff_t',
-    Field('id', effect_id.ty),
+eff = Struct('seff_request_t',
+    Field('effect', effect_id.ty),
     Field('payload', ptr(void))
 )
 
@@ -84,8 +84,9 @@ if stack_policy == segmented:
 cont = Struct('seff_cont_t', *cont_fields)
 
 coroutine_state = Enum('seff_coroutine_state_t',
+    'FINISHED',
     'PAUSED',
-    'FINISHED'
+    'RUNNING'
 )
 
 # /* When we allocate a stack segment we put this header at the

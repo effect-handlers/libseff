@@ -41,7 +41,6 @@ E seff_coroutine_t *seff_coroutine_new(seff_start_fun_t *, void *);
 E seff_coroutine_t *seff_coroutine_new_sized(seff_start_fun_t *, void *, size_t);
 E void seff_coroutine_delete(seff_coroutine_t *);
 
-E __attribute__((no_split_stack)) void *seff_yield(seff_coroutine_t *self, void *arg);
 E seff_coroutine_t *seff_locate_handler(effect_id effect);
 
 E seff_coroutine_t *seff_current_coroutine(void);
@@ -50,18 +49,21 @@ E seff_coroutine_t *seff_current_coroutine(void);
 E __attribute__((no_split_stack)) void *seff_current_stack_top(void);
 #endif
 
+E __attribute__((no_split_stack)) seff_request_t seff_handle(
+    seff_coroutine_t *k, void *arg, effect_set handled);
+E seff_request_t seff_resume(seff_coroutine_t *k, void *arg);
+
 typedef void *(default_handler_t)(void *);
 E default_handler_t *seff_set_default_handler(effect_id effect, default_handler_t *handler);
 E default_handler_t *seff_get_default_handler(effect_id effect);
 
+E __attribute__((no_split_stack)) void *seff_yield(
+    seff_coroutine_t *self, effect_id effect, void *payload);
 // Performance difference is massive between seff_perform being inlined or not
 static inline void *seff_perform(effect_id eff_id, void *payload) {
     seff_coroutine_t *handler = seff_locate_handler(eff_id);
     if (handler) {
-        seff_eff_t e;
-        e.id = eff_id;
-        e.payload = payload;
-        return seff_yield(handler, &e);
+        return seff_yield(handler, eff_id, payload);
     } else {
         // Execute the handler in-place, since default handlers
         // are not allowed to pause the coroutine
@@ -72,13 +74,9 @@ static inline void *seff_perform(effect_id eff_id, void *payload) {
     // here, use a syscall wrapper
 }
 
-E __attribute__((noreturn)) void seff_throw(effect_id effect, void *payload);
-E __attribute__((noreturn, no_split_stack)) void seff_return(seff_coroutine_t *k, void *result);
-E __attribute__((noreturn, no_split_stack)) void coroutine_prelude(void);
-
-E __attribute__((no_split_stack)) void *seff_handle(
-    seff_coroutine_t *k, void *arg, effect_set handled);
-E void *seff_resume(seff_coroutine_t *k, void *arg);
+E __attribute__((noreturn, no_split_stack)) void seff_exit(
+    seff_coroutine_t *k, effect_id eff_id, void *payload);
+E __attribute__((noreturn)) void seff_throw(effect_id eff_id, void *payload);
 
 // TODO: this is architecture specific
 #define MAKE_SYSCALL_WRAPPER(ret, fn, ...)                                                        \
@@ -100,69 +98,56 @@ E void *seff_resume(seff_coroutine_t *k, void *arg);
 #define EFF_RET_T(name) __##name##_eff_ret
 #define HANDLES(name) (1 << EFF_ID(name))
 
-#define CASE_EFFECT(request, name, block)                                             \
-    case __##name##_eff_id: {                                                         \
-        __##name##_eff_payload payload = *(__##name##_eff_payload *)request->payload; \
-        (void)payload;                                                                \
-        block                                                                         \
+#define CASE_EFFECT(request, name, block)                                      \
+    case EFF_ID(name): {                                                       \
+        EFF_PAYLOAD_T(name) payload = *(EFF_PAYLOAD_T(name) *)request.payload; \
+        (void)payload;                                                         \
+        block                                                                  \
+    }
+#define CASE_RETURN(request, block)       \
+    case EFF_ID(return): {                \
+        struct {                          \
+            void *result;                 \
+        } payload;                        \
+        payload.result = request.payload; \
+        (void)payload;                    \
+        block                             \
     }
 
 #define DEFINE_EFFECT(name, id, ret_val, payload) \
-    typedef ret_val __##name##_eff_ret;           \
-    static const int64_t __##name##_eff_id = id;  \
-    typedef struct payload __##name##_eff_payload
+    typedef ret_val EFF_RET_T(name);              \
+    static const effect_id EFF_ID(name) = id;     \
+    typedef struct payload EFF_PAYLOAD_T(name)
 
-#define PERFORM(name, ...)                                                           \
-    ({                                                                               \
-        __##name##_eff_payload __payload = {__VA_ARGS__};                            \
-        (__##name##_eff_ret)(uintptr_t) seff_perform(__##name##_eff_id, &__payload); \
+typedef void EFF_RET_T(return);
+static const effect_id EFF_ID(return) = ~(effect_id)0;
+typedef void EFF_PAYLOAD_T(return);
+
+static inline bool seff_finished(seff_request_t req) { return req.effect == EFF_ID(return); }
+
+#define PERFORM(name, ...)                                                   \
+    ({                                                                       \
+        EFF_PAYLOAD_T(name) __payload = (EFF_PAYLOAD_T(name)){__VA_ARGS__};  \
+        (EFF_RET_T(name))(uintptr_t) seff_perform(EFF_ID(name), &__payload); \
     })
 
 #ifndef NDEBUG
-#define PERFORM_DIRECT(coroutine, name, ...)                               \
-    ({                                                                     \
-        __##name##_eff_payload __payload = {__VA_ARGS__};                  \
-        seff_eff_t __request = {__##name##_eff_id, &__payload};            \
-        assert((coroutine->handled_effects & (HANDLES(name))));            \
-        (__##name##_eff_ret)(uintptr_t) seff_yield(coroutine, &__request); \
-    })
+#define ASSERT_HANDLES(coroutine, name) \
+    assert((EFF_ID(name) == EFF_ID(return)) || (coroutine->handled_effects & HANDLES(name)))
 #else
-#define PERFORM_DIRECT(coroutine, name, ...)                               \
-    ({                                                                     \
-        __##name##_eff_payload __payload = {__VA_ARGS__};                  \
-        seff_eff_t __request = {__##name##_eff_id, &__payload};            \
-        (__##name##_eff_ret)(uintptr_t) seff_yield(coroutine, &__request); \
-    })
+#define ASSERT_HANDLES(coroutine, name)
 #endif
 
-#define THROW(name, ...)                                  \
-    ({                                                    \
-        __##name##_eff_payload __payload = {__VA_ARGS__}; \
-        seff_throw(__##name##_eff_id, &__payload);        \
+#define PERFORM_DIRECT(coroutine, name, ...)                                          \
+    ({                                                                                \
+        EFF_PAYLOAD_T(name) __payload = (EFF_PAYLOAD_T(name)){__VA_ARGS__};           \
+        ASSERT_HANDLES(coroutine, name);                                              \
+        (EFF_RET_T(name))(uintptr_t) seff_yield(coroutine, EFF_ID(name), &__payload); \
     })
 
-/*
-  Proof of concept. The actual syntax might look more like:
-
-  handle coroutine with value {
-      case (Eff1 e) {
-          ...
-      }
-      case (Eff2 e) {
-          ...
-      }
-      case (finish v) {
-          ...
-      }
-
-*/
-#define HANDLE1(coroutine, value, eff, action, result)                       \
-    {                                                                        \
-        seff_eff_t *__request = seff_handle(coroutine, value, HANDLES(eff)); \
-        if (coroutine->state == FINISHED)                                    \
-            result else switch (__request->id) {                             \
-                CASE_EFFECT(__request, eff, { action break; });              \
-            }                                                                \
-    }
-
+#define THROW(name, ...)                               \
+    ({                                                 \
+        EFF_PAYLOAD_T(name) __payload = {__VA_ARGS__}; \
+        seff_throw(EFF_ID(name), &__payload);          \
+    })
 #endif

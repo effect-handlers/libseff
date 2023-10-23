@@ -21,9 +21,9 @@ int main(int argc, char **argv) {
 
     int64_t value = 0;
 
-    seff_eff_t *request = seff_handle(k, NULL, HANDLES(put) | HANDLES(get));
-    while (k->state != FINISHED) {
-        switch (request->id) {
+    seff_request_t request = seff_handle(k, NULL, HANDLES(put) | HANDLES(get));
+    while (!seff_finished(request)) {
+        switch (request.effect) {
             CASE_EFFECT(request, put, {
                 value = payload.value;
                 request = seff_handle(k, NULL, HANDLES(put) | HANDLES(get));

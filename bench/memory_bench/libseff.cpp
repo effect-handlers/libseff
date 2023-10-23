@@ -8,7 +8,7 @@ template <size_t padding> void *deep_coroutine(seff_coroutine_t *self, void *arg
     if (depth == 0) {
         volatile bool loop = true;
         while (loop) {
-            seff_yield(self, nullptr);
+            seff_yield(self, 0, nullptr);
         }
         return arr;
     } else {

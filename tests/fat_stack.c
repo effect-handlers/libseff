@@ -10,7 +10,7 @@ char fat_stack(void) {
 }
 
 void *fn(seff_coroutine_t *self, void *arg) {
-    seff_yield(self, NULL);
+    seff_yield(self, 0, NULL);
     fat_stack();
     return NULL;
 }

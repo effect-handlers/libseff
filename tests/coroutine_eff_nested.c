@@ -63,10 +63,10 @@ void *parent(seff_coroutine_t *toplevel_handler, void *args) {
 int main(void) {
     seff_coroutine_t *k = seff_coroutine_new(parent, NULL);
 
-    seff_eff_t *request = seff_resume(k, NULL);
-    while (k->state != FINISHED) {
+    seff_request_t request = seff_handle(k, NULL, HANDLES(print) | HANDLES(read));
+    while (!seff_finished(request)) {
         void *response;
-        switch (request->id) {
+        switch (request.effect) {
             CASE_EFFECT(request, print, {
                 puts(payload.string);
                 response = NULL;
@@ -77,9 +77,10 @@ int main(void) {
                 break;
             });
         default:
-            assert(0);
-            return -1;
+            assert(false);
+            exit(-1);
         }
-        request = seff_resume(k, response);
+        request = seff_handle(k, response, HANDLES(print) | HANDLES(read));
     }
+    seff_coroutine_delete(k);
 }
