@@ -5,14 +5,26 @@ include ../common.mk
 output/%: %.c $(LIBSEFF_LIB) $(PICOHTTP_LIB) | output
 	$(CC) $(CFLAGS_LIBSEFF) $(PICOHTTP_INCLUDE_DIRS) $< $(PICOHTTP_LIB) -o $@ $(LDFLAGS_LIBSEFF)
 
-output/cohttp_eio: external/cohttp_eio | output
-	cp $< $@
+output/cohttp_eio: external/retro-httpaf-bench/cohttp-eio | output
+	cd external/retro-httpaf-bench/cohttp-eio 	; \
+	./build.sh 									; \
+	ls 											; \
+	cd ../../.. 								; \
+	cp external/retro-httpaf-bench/cohttp-eio/cohttp_eio.exe $@
 
-output/nethttp_go: external/nethttp_go | output
-	cp $< $@
+output/nethttp_go: external/retro-httpaf-bench/nethttp-go | output
+	cd external/retro-httpaf-bench/nethttp-go 	; \
+	./build.sh 									; \
+	ls 											; \
+	cd ../../.. 								; \
+	cp external/retro-httpaf-bench/nethttp-go/nethttp_go.exe $@
 
-output/rust_hyper: external/rust_hyper | output
-	cp $< $@
+output/rust_hyper: external/retro-httpaf-bench/rust-hyper | output
+	cd external/retro-httpaf-bench/rust-hyper 	; \
+	./build.sh 									; \
+	ls 											; \
+	cd ../../.. 								; \
+	cp external/retro-httpaf-bench/rust-hyper/rust_hyper.exe $@
 
 .PHONY: bench
 

@@ -19,3 +19,6 @@
 [submodule "bench/picohttpparser"]
 	path = bench/picohttpparser
 	url = https://github.com/h2o/picohttpparser.git
+[submodule "bench/http_server_bench/external/retro-httpaf-bench"]
+	path = bench/http_server_bench/external/retro-httpaf-bench
+	url = https://github.com/teofr/retro-httpaf-bench.git

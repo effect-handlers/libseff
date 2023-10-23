@@ -59,7 +59,10 @@ asm/seff_types.S
 output
 
 # Python cache
-decls/__pycache__
+__pycache__
+
+# Python enviroments
+.venvs
 
 # VSCode
 .vscode
