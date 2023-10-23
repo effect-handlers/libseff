@@ -63,3 +63,6 @@ output/libmpeff_multi: libmpeff.c $(LIBMPEFF_LIB) | output
 
 output/libmprompt: libmprompt.c $(LIBMPROMPT_LIB) | output
 	$(CC) $(CFLAGS_LIBMPROMPT) libmprompt.c -o $@ $(LDFLAGS_LIBMPROMPT)
+
+bench: all | output
+	hyperfine -w5 --export-json output/bench.json --export-markdown output/bench.md output/libseff output/libseff_direct output/c output/cpp-effects output/libhandler_tail_noop output/libhandler_tail  output/libhandler_general output/libmpeff_tail_noop output/libmpeff_tail output/libmpeff_scoped_once output/libmpeff_scoped output/libmpeff_once output/libmpeff_multi output/libmprompt
