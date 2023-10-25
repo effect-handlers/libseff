@@ -34,7 +34,7 @@ styles = {
 }
 
 markers = iter(["v", "^", "s", "D", "p", "|", "x"])
-colours = iter(["blue", "gray", "magenta", "yellow", "green", "orange", "lila"])
+colours = iter(["blue", "gray", "magenta", "yellow", "green", "orange", "black"])
 
 def getStyle(label):
     if label not in styles:

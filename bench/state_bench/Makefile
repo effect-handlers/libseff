@@ -11,10 +11,10 @@ all_libmprompt: output/libmprompt
 include ../common.mk
 
 output/libseff: libseff.c $(LIBSEFF_LIB) | output
-	$(CC) $(CFLAGS_LIBSEFF) libseff.c -o $@ $(LDFLAGS_LIBSEFF)
+	$(CC) $(CFLAGS_LIBSEFF_SEGMENTED) libseff.c -o $@ $(LDFLAGS_LIBSEFF_SEGMENTED)
 
 output/libseff_direct: libseff_direct.c $(LIBSEFF_LIB) | output
-	$(CC) $(CFLAGS_LIBSEFF) libseff_direct.c -o $@ $(LDFLAGS_LIBSEFF)
+	$(CC) $(CFLAGS_LIBSEFF_SEGMENTED) libseff_direct.c -o $@ $(LDFLAGS_LIBSEFF_SEGMENTED)
 
 output/c: c.c | output
 	$(CC) $(CFLAGS) c.c -o $@ $(LDFLAGS)

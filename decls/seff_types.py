@@ -29,6 +29,8 @@ parser.add_argument('--stack', choices=[segmented, fixed, vmmem], default=segmen
 
 parser.add_argument('--sequence-counters', action='store_true')
 
+parser.add_argument('--target-dir', required=True)
+
 args = parser.parse_args()
 
 if args.sequence_counters:
@@ -118,4 +120,4 @@ coroutine = Struct('seff_coroutine_t',
     Field('handled_effects', effect_set.ty)
 )
 
-generate_file(__file__)
+generate_file(__file__, args.target_dir)

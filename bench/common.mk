@@ -35,9 +35,11 @@ FLAGS := ${FLAGS.${BUILD}} -g -Wall -Wunreachable-code -pedantic -pthread \
 	-Wno-zero-length-array \
 	-Wno-unreachable-code-loop-increment
 
-LIBSEFF_LINK_LIBS := ${ROOT_DIR}/output/lib/libutils.a ${ROOT_DIR}/output/lib/libseff.a
+LIBSEFF_SEGMENTED_LINK_LIBS := ${ROOT_DIR}/output-segmented/lib/libutils.a ${ROOT_DIR}/output-segmented/lib/libseff.a
+LIBSEFF_FIXED_LINK_LIBS := ${ROOT_DIR}/output-fixed/lib/libutils.a ${ROOT_DIR}/output-fixed/lib/libseff.a
 
-LIBSEFF_INCLUDE_DIRS     := -I${ROOT_DIR}/src -I${ROOT_DIR}/utils -I${ROOT_DIR}/scheduler
+LIBSEFF_SEGMENTED_INCLUDE_DIRS     := -I${ROOT_DIR}/src -I${ROOT_DIR}/output-segmented/include -I${ROOT_DIR}/utils -I${ROOT_DIR}/scheduler
+LIBSEFF_FIXED_INCLUDE_DIRS     := -I${ROOT_DIR}/src -I${ROOT_DIR}/output-fixed/include -I${ROOT_DIR}/utils -I${ROOT_DIR}/scheduler
 LIBMPROMPT_INCLUDE_DIRS  := -I${DEPS_DIR}/libmprompt/include
 LIBHANDLER_INCLUDE_DIRS  := -I${DEPS_DIR}/libhandler/inc
 CPPCORO_INCLUDE_DIRS     := -I${DEPS_DIR}/cppcoro/include
@@ -46,19 +48,22 @@ CPP-EFFECTS_INCLUDE_DIRS := -I${DEPS_DIR}/cpp-effects/include
 PICOHTTP_INCLUDE_DIRS	 := -I${DEPS_DIR}/picohttpparser
 
 CFLAGS            := $(FLAGS) -std=gnu11
-CFLAGS_LIBSEFF    := $(CFLAGS) $(LIBSEFF_INCLUDE_DIRS) -fsplit-stack
+CFLAGS_LIBSEFF_SEGMENTED    := $(CFLAGS) $(LIBSEFF_SEGMENTED_INCLUDE_DIRS) -fsplit-stack
+CFLAGS_LIBSEFF_FIXED    := $(CFLAGS) $(LIBSEFF_FIXED_INCLUDE_DIRS) -fsplit-stack
 CFLAGS_LIBMPROMPT := $(CFLAGS) $(LIBMPROMPT_INCLUDE_DIRS)
 CFLAGS_LIBHANDLER := $(CFLAGS) $(LIBHANDLER_INCLUDE_DIRS)
 
 CXXFLAGS             := $(FLAGS) -stdlib=libc++
-CXXFLAGS_LIBSEFF     := $(CXXFLAGS) -std=c++20 $(LIBSEFF_INCLUDE_DIRS) -fsplit-stack
+CXXFLAGS_LIBSEFF_SEGMENTED     := $(CXXFLAGS) -std=c++20 $(LIBSEFF_SEGMENTED_INCLUDE_DIRS) -fsplit-stack
+CXXFLAGS_LIBSEFF_FIXED     := $(CXXFLAGS) -std=c++20 $(LIBSEFF_FIXED_INCLUDE_DIRS) -fsplit-stack
 CXXFLAGS_CPPCORO     := $(CXXFLAGS) -std=c++20 $(CPPCORO_INCLUDE_DIRS)
 # Beware: libco uses the name co_yield, which clashes with C++20's co_yield keyword
 CXXFLAGS_LIBCO       := $(CXXFLAGS) -std=c++17 $(LIBCO_INCLUDE_DIRS)
 CXXFLAGS_CPP-EFFECTS := $(CXXFLAGS) -std=c++20 $(CPP-EFFECTS_INCLUDE_DIRS)
 
 LDFLAGS             :=  -L${ROOT_DIR}/output -fuse-ld=$(LD) -flto=thin
-LDFLAGS_LIBSEFF     := $(LIBSEFF_LINK_LIBS) $(LDFLAGS)
+LDFLAGS_LIBSEFF_SEGMENTED     := $(LIBSEFF_SEGMENTED_LINK_LIBS) $(LDFLAGS)
+LDFLAGS_LIBSEFF_FIXED     := $(LIBSEFF_FIXED_LINK_LIBS) $(LDFLAGS)
 LDFLAGS_LIBCO       := -L${DEPS_DIR}/libco/lib $(LDFLAGS) -ldl -lcolib
 LDFLAGS_CPPCORO     := -L${DEPS_DIR}/cppcoro/build/ $(LDFLAGS) -lcppcoro
 LDFLAGS_LIBMPROMPT  :=  -L${DEPS_DIR}/libmprompt/out $(LDFLAGS) -lmprompt -lmpeff -lpthread

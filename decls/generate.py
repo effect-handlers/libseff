@@ -1,13 +1,13 @@
-# 
+#
 # Copyright (c) 2023 Huawei Technologies Co., Ltd.
-# 
+#
 # libseff is licensed under Mulan PSL v2.
-# You can use this software according to the terms and conditions of the Mulan PSL v2. 
+# You can use this software according to the terms and conditions of the Mulan PSL v2.
 # You may obtain a copy of Mulan PSL v2 at:
-# 	    http://license.coscl.org.cn/MulanPSL2 
+# 	    http://license.coscl.org.cn/MulanPSL2
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
-# FIT FOR A PARTICULAR PURPOSE.  
+# FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
 #
 # A tiny library for generating and maintaining a set of coherent datatype declarations
@@ -230,13 +230,12 @@ def func(args: typing.List[Ty], ret: Ty):
 def atomic(ty: Ty):
     return Ty(lambda s: '_Atomic ' + ty.declare(s), ty.size)
 
-def generate_file(path_str):
+def generate_file(path_str, target_dir):
     import os
-    path = os.path.dirname(os.path.realpath(path_str))
     name = os.path.basename(path_str)[:-3]
 
-    c_file(name, f'{path}/../src')
-    asm_file(name, f'{path}/../asm')
+    c_file(name, target_dir)
+    asm_file(name, target_dir)
 
     global contents
     contents = []

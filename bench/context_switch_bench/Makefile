@@ -3,7 +3,7 @@ all: output/cppcoro output/libseff output/libco
 include ../common.mk
 
 output/libseff: libseff.cpp $(LIBSEFF_LIB) | output
-	$(CXX) $(CXXFLAGS_LIBSEFF) libseff.cpp -o $@ $(LDFLAGS_LIBSEFF)
+	$(CXX) $(CXXFLAGS_LIBSEFF_SEGMENTED) libseff.cpp -o $@ $(LDFLAGS_LIBSEFF_SEGMENTED)
 
 output/libco: libco.cpp $(LIBCO_LIB) | output
 	$(CXX) $(CXXFLAGS_LIBCO) libco.cpp -o $@ $(LDFLAGS_LIBCO)

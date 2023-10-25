@@ -57,6 +57,8 @@ asm/seff_types.S
 
 # Output folders
 output
+output-segmented
+output-fixed
 
 # Python cache
 __pycache__
