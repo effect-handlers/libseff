@@ -13,7 +13,7 @@ void *SegBinarySearch(seff_coroutine_t *self, void *_arg) {
         int const *middle = first + half;
 
         prefetch_c((const char *)middle);
-        seff_yield(self, (void *)-1);
+        seff_yield(self, 0, (void *)-1);
         int x = *middle;
 
         if (x < val) {
@@ -58,7 +58,7 @@ long SegsMultiLookup(int v[], size_t v_size, int lookups[], size_t lookups_size,
 
         while (1) {
             seff_coroutine_t *coro = coro_queue_dequeue(&q).coro;
-            int64_t res = (int64_t)seff_resume(coro, NULL);
+            int64_t res = (int64_t)seff_resume(coro, NULL).payload;
             if (res == -1) {
                 // keep looking next iter
                 coro_queue_enqueue(&q, (task_t){coro, NULL});
@@ -77,7 +77,7 @@ long SegsMultiLookup(int v[], size_t v_size, int lookups[], size_t lookups_size,
     // no more to add, finish up
     while (limit < streams) {
         seff_coroutine_t *coro = coro_queue_dequeue(&q).coro;
-        int64_t res = (int64_t)seff_resume(coro, NULL);
+        int64_t res = (int64_t)seff_resume(coro, NULL).payload;
         if (res == -1) {
             // keep looking next iter
             coro_queue_enqueue(&q, (task_t){coro, NULL});

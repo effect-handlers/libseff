@@ -5,7 +5,7 @@
 #include <string.h>
 
 void *fn(seff_coroutine_t *self, void *arg) {
-    seff_yield(self, NULL);
+    seff_yield(self, 0, NULL);
     return NULL;
 }
 

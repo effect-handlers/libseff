@@ -10,7 +10,7 @@ void *worker(seff_coroutine_t *self, void *_worker_id) {
     for (size_t i = 0; i < worker_id; i++) {
         result += i * i;
         context_switches += 1;
-        seff_yield(self, NULL);
+        seff_yield(self, 0, NULL);
     }
     // printf("Coroutine %ld returning %ld\n", worker_id, result);
     context_switches += 1;
@@ -52,9 +52,9 @@ int main(void) {
         // printf("Scheduling coroutine...\n");
         seff_coroutine_t *next = dequeue(&queue);
         context_switches += 1;
-        void *result = seff_resume(next, NULL);
-        if (next->state == FINISHED) {
-            results[done] = (int64_t)result;
+        seff_request_t result = seff_resume(next, NULL);
+        if (seff_finished(result)) {
+            results[done] = (int64_t)result.payload;
             done++;
             seff_coroutine_delete(next);
         } else {

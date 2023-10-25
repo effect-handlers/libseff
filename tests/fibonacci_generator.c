@@ -8,7 +8,7 @@ void *fibonacci_generator(seff_coroutine_t *self, void *arg) {
     int64_t limit = (int64_t)arg;
     int64_t a = 1, b = 0;
     for (size_t i = 0; i < limit; i++) {
-        seff_yield(self, (void *)a);
+        seff_yield(self, 0, (void *)a);
         int64_t tmp = a;
         a = a + b;
         b = tmp;
@@ -22,9 +22,11 @@ int main(void) {
         // The extra argument to seff_resume will be passed to
         // fibonacci_generator as the return value of the call to seff_yield. In
         // this case, it is just ignored.
-        int64_t next_fibonacci = (int64_t)seff_resume(fib, NULL);
-        if (fib->state == FINISHED)
+        seff_request_t req = seff_resume(fib, NULL);
+
+        if (seff_finished(req))
             break;
+        int64_t next_fibonacci = (int64_t)req.payload;
         printf("%ld\n", next_fibonacci);
     }
 }

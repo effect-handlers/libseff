@@ -23,16 +23,14 @@ void *with_output_to_buffer(seff_start_fun_t *fn, void *arg, char *buffer) {
     char *buffptr = buffer;
 
     while (true) {
-        seff_eff_t *req = seff_handle(&k, NULL, HANDLES(print));
-        if (k.state == FINISHED) {
-            return (void *)req;
-        }
-        switch (req->id) {
-            CASE_EFFECT(req, print, {
+        seff_request_t res = seff_handle(&k, NULL, HANDLES(print));
+        switch (res.effect) {
+            CASE_EFFECT(res, print, {
                 // Note we are NOT using strcpy!
                 buffptr = stpcpy(buffptr, payload.str);
                 break;
             });
+            CASE_RETURN(res, { return payload.result; });
         default:
             assert(false);
         }
@@ -45,9 +43,9 @@ void *with_output_to_default(seff_start_fun_t *fn, void *arg) {
     seff_coroutine_t k;
     seff_coroutine_init(&k, fn, arg);
 
-    seff_eff_t *req = seff_handle(&k, NULL, 0);
-    assert(k.state == FINISHED);
-    return (void *)req;
+    seff_request_t res = seff_handle(&k, NULL, 0);
+    assert(res.effect == EFF_ID(return));
+    return res.payload;
 }
 
 void *printer(seff_coroutine_t *self, void *arg) {

@@ -13,8 +13,8 @@
  *
  */
 
-#include "scheff.h"
 #include "atomic.h"
+#include "scheff.h"
 
 typedef struct task_t {
     seff_coroutine_t coroutine;
@@ -205,74 +205,74 @@ void *scheff_worker_thread(void *_self) {
         }
         current_task->poll_condition = NULL;
 
-        seff_eff_t *request = (seff_eff_t *)seff_handle(&current_task->coroutine, NULL,
+        seff_request_t request = seff_handle(&current_task->coroutine, NULL,
             HANDLES(fork) | HANDLES(poll) | HANDLES(sleep) | HANDLES(wake));
-        if (current_task->coroutine.state == FINISHED) {
-            debug(self->return_requests++);
-            FINALIZE(current_task);
-        } else {
-            switch (request->id) {
-                CASE_EFFECT(request, fork, {
-                    debug(self->fork_requests++);
+        switch (request.effect) {
+            CASE_RETURN(request, {
+                debug(self->return_requests++);
+                FINALIZE(current_task);
+                break;
+            });
+            CASE_EFFECT(request, fork, {
+                debug(self->fork_requests++);
 
-                    RELAXED(fetch_add, remaining_tasks, 1);
+                RELAXED(fetch_add, remaining_tasks, 1);
 
-                    // TODO: duplicated with scheff_schedule
-                    task_t *new_task = malloc(sizeof(task_t));
-                    seff_coroutine_init_sized(
-                        &new_task->coroutine, payload.fn, payload.arg, STACK_SIZE);
-                    new_task->poll_condition = NULL;
-                    new_task->poll_arg = NULL;
-                    debug(new_task->id = RELAXED(fetch_add, &self->scheduler->task_counter, 1));
+                // TODO: duplicated with scheff_schedule
+                task_t *new_task = malloc(sizeof(task_t));
+                seff_coroutine_init_sized(
+                    &new_task->coroutine, payload.fn, payload.arg, STACK_SIZE);
+                new_task->poll_condition = NULL;
+                new_task->poll_arg = NULL;
+                debug(new_task->id = RELAXED(fetch_add, &self->scheduler->task_counter, 1));
 
+                ENQUEUE(current_task);
+                ENQUEUE_PRIORITY(new_task);
+                break;
+            });
+            CASE_EFFECT(request, poll, {
+                // TODO: why do we need poll, isn't sleep + event loop enough?
+                debug(self->poll_requests++);
+
+                static bool suppress_warning = false;
+                if ((void *)QUEUE(push) == (void *)cl_queue_push && !suppress_warning) {
+                    printf("WARNING! Using the suspend effect on Chase-Lev queues can lead to "
+                           "livelocks\n");
+                    suppress_warning = true;
+                }
+                current_task->poll_condition = payload.poll_condition;
+                current_task->poll_arg = payload.poll_arg;
+                ENQUEUE(current_task);
+                break;
+            });
+            CASE_EFFECT(request, sleep, {
+                debug(self->sleep_requests++);
+
+                scheff_waker_t *waker = (scheff_waker_t *)current_task;
+                if (!payload.must_sleep(waker, payload.arg)) {
                     ENQUEUE(current_task);
-                    ENQUEUE_PRIORITY(new_task);
-                    break;
-                });
-                CASE_EFFECT(request, poll, {
-                    // TODO: why do we need poll, isn't sleep + event loop enough?
-                    debug(self->poll_requests++);
+                }
 
-                    static bool suppress_warning = false;
-                    if ((void *)QUEUE(push) == (void *)cl_queue_push && !suppress_warning) {
-                        printf("WARNING! Using the suspend effect on Chase-Lev queues can lead to "
-                               "livelocks\n");
-                        suppress_warning = true;
-                    }
-                    current_task->poll_condition = payload.poll_condition;
-                    current_task->poll_arg = payload.poll_arg;
+                break;
+            });
+            CASE_EFFECT(request, wake, {
+                debug(self->wake_requests++);
+
+                for (size_t i = 0; i < payload.n_wakers; i++) {
+                    task_t *task = (task_t *)payload.wakers[i];
+                    // TODO: Only the last one is priority, right?
+                    ENQUEUE_PRIORITY(task);
+                }
+
+                if (payload.resume) {
                     ENQUEUE(current_task);
-                    break;
-                });
-                CASE_EFFECT(request, sleep, {
-                    debug(self->sleep_requests++);
-
-                    scheff_waker_t *waker = (scheff_waker_t *)current_task;
-                    if (!payload.must_sleep(waker, payload.arg)) {
-                        ENQUEUE(current_task);
-                    }
-
-                    break;
-                });
-                CASE_EFFECT(request, wake, {
-                    debug(self->wake_requests++);
-
-                    for (size_t i = 0; i < payload.n_wakers; i++) {
-                        task_t *task = (task_t *)payload.wakers[i];
-                        // TODO: Only the last one is priority, right?
-                        ENQUEUE_PRIORITY(task);
-                    }
-
-                    if (payload.resume) {
-                        ENQUEUE(current_task);
-                    } else {
-                        FINALIZE(current_task);
-                    }
-                    break;
-                });
-            default:
-                assert(false);
-            }
+                } else {
+                    FINALIZE(current_task);
+                }
+                break;
+            });
+        default:
+            assert(false);
         }
     }
 

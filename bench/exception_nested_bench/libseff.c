@@ -32,8 +32,8 @@ int main(void) {
     }
 
     for (size_t i = 0; i < 100000; i++) {
-        seff_eff_t *exn = seff_handle(&k, NULL, HANDLES(runtime_error));
-        switch (exn->id) {
+        seff_request_t exn = seff_handle(&k, NULL, HANDLES(runtime_error));
+        switch (exn.effect) {
             CASE_EFFECT(exn, runtime_error, { caught++; });
             break;
         default:

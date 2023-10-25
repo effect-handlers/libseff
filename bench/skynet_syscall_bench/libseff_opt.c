@@ -74,19 +74,21 @@ int main(int argc, char **argv) {
     seff_coroutine_t *root = seff_coroutine_new(skynet, (void *)1);
     int64_t total = 0;
 
-    seff_eff_t *eff = seff_handle(root, NULL, HANDLES(yield_int));
-    while (root->state != FINISHED) {
-        switch (eff->id) {
-            CASE_EFFECT(eff, yield_int, {
+    seff_request_t request = seff_handle(root, NULL, HANDLES(yield_int));
+    while (true) {
+        switch (request.effect) {
+            CASE_EFFECT(request, yield_int, {
                 total += payload.value;
                 break;
+            });
+            CASE_RETURN(request, {
+                    seff_coroutine_delete(root);
+                    printf("Total: %ld\n", total);
+                    return 0;
             });
         default:
             assert(false);
         }
-        eff = seff_handle(root, NULL, HANDLES(yield_int));
+        request = seff_handle(root, NULL, HANDLES(yield_int));
     }
-    seff_coroutine_delete(root);
-
-    printf("Total: %ld\n", total);
 }

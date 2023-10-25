@@ -41,6 +41,7 @@ class Architecture:
     def __init__(self, bits: int):
         assert(int(bits/8) == bits/8)
         self.word_type = named_ty(f'uint{bits}_t', int(bits/8))
+        self.half_word_type = named_ty(f'uint{bits//2}_t', int(bits/16))
         self.size_t = named_ty('size_t', int(bits/8))
 
 arch = None
