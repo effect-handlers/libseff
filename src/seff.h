@@ -138,7 +138,7 @@ static inline bool seff_finished(seff_request_t req) { return req.effect == EFF_
 #define ASSERT_HANDLES(coroutine, name)
 #endif
 
-#define PERFORM_DIRECT(coroutine, name, ...)                                          \
+#define YIELD(coroutine, name, ...)                                          \
     ({                                                                                \
         EFF_PAYLOAD_T(name) __payload = (EFF_PAYLOAD_T(name)){__VA_ARGS__};           \
         ASSERT_HANDLES(coroutine, name);                                              \

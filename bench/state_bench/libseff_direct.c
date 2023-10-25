@@ -5,8 +5,8 @@
 DEFINE_EFFECT(put, 0, void, { int64_t value; });
 DEFINE_EFFECT(get, 1, int64_t, {});
 
-void put(seff_coroutine_t *handler, int64_t number) { PERFORM_DIRECT(handler, put, number); }
-int64_t get(seff_coroutine_t *handler) { return PERFORM_DIRECT(handler, get); }
+void put(seff_coroutine_t *handler, int64_t number) { YIELD(handler, put, number); }
+int64_t get(seff_coroutine_t *handler) { return YIELD(handler, get); }
 
 void *stateful(seff_coroutine_t *self, void *_arg) {
     seff_coroutine_t *put_handler = seff_locate_handler(EFF_ID(put));
