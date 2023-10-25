@@ -22,19 +22,19 @@ styles = {
         'marker': 'o',
         'alpha': 1.0,
         'zorder': 10, # so libseff is at the front
-        'scalex': 'linear'
+        # 'scalex': 'linear'
     },
     'libscheff': {
         'color': 'red',
         'marker': 'o',
         'alpha': 1.0,
         'zorder': 10, # so libseff is at the front
-        'scalex': 'linear'
+        # 'scalex': 'linear'
     }
 }
 
-markers = iter(["v", "^", "s", "D", "p", "|"])
-colours = iter(["blue", "gray", "magenta", "yellow", "green"])
+markers = iter(["v", "^", "s", "D", "p", "|", "x"])
+colours = iter(["blue", "gray", "magenta", "yellow", "green", "orange", "lila"])
 
 def getStyle(label):
     if label not in styles:
@@ -44,7 +44,7 @@ def getStyle(label):
             'marker': next(markers),
             'alpha': 0.5,
             'zorder': 0,
-            'scalex': 'linear'
+            # 'scalex': 'linear'
         }
         styles[label] = newStyle
 
@@ -70,5 +70,3 @@ def grapher(results, ax=plt, parameter_name = None):
     ax.legend()
     ax.set_xlabel(parameter_name)
     ax.set_ylabel(results[0]['unit'])
-
-

@@ -13,7 +13,7 @@ def parse_hyperfine(f):
         curr['label'] = r['command']
         curr['stddev'] = r['stddev']
         curr['measurements'] = r['times']
-        curr['parameters'] = r['parameters']
+        curr['parameters'] = r['parameters'] if 'parameters' in r else []
 
         res.append(curr)
 
