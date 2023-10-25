@@ -214,9 +214,9 @@ coroutine_prelude:
     call *%r15
     movq %r13, %rdi
     # FALLTHROUGH TO SEFF_RETURN
-    # set the return value to (seff_result_t){ -1, %rax }
+    # set the return value to (seff_result_t){ 0xFF...FF, %rax }
     pushq %rax
-    movq $-1, %rsi
+    movq $RETURN_EFFECT_ID, %rsi
     movq %rax, %rdx
     .cfi_endproc
 .size coroutine_prelude, . - coroutine_prelude

@@ -120,7 +120,7 @@ E __attribute__((noreturn)) void seff_throw(effect_id eff_id, void *payload);
     typedef struct payload EFF_PAYLOAD_T(name)
 
 typedef void EFF_RET_T(return);
-static const effect_id EFF_ID(return) = ~(effect_id)0;
+static const effect_id EFF_ID(return) = RETURN_EFFECT_ID;
 typedef void EFF_PAYLOAD_T(return);
 
 static inline bool seff_finished(seff_request_t req) { return req.effect == EFF_ID(return); }

@@ -61,6 +61,8 @@ max_effects = Defn('MAX_EFFECTS', arch.word_type.size * 8)
 effect_set = Typedef('effect_set', arch.word_type)
 effect_id = Typedef('effect_id', arch.word_type)
 
+Defn('RETURN_EFFECT_ID', '0xFFFFFFFFFFFFFFFF')
+
 eff = Struct('seff_request_t',
     Field('effect', effect_id.ty),
     Field('payload', ptr(void))
