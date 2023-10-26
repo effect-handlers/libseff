@@ -13,8 +13,8 @@ int main(void) {
     seff_coroutine_t k;
     seff_coroutine_init(&k, computation, NULL);
     for (size_t i = 0; i < 1000000; i++) {
-        seff_eff_t *exn = seff_handle(&k, NULL, HANDLES(runtime_error));
-        switch (exn->id) {
+        seff_request_t exn = seff_handle(&k, NULL, HANDLES(runtime_error));
+        switch (exn.effect) {
             CASE_EFFECT(exn, runtime_error, { caught++; });
             break;
         default:

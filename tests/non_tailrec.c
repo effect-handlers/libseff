@@ -17,15 +17,14 @@ void *effectful(seff_coroutine_t *self, void *arg) {
 void dummy(void) __attribute__((optnone)) { free(NULL); }
 
 void handle(seff_coroutine_t *k) {
-    seff_eff_t *request = seff_handle(k, NULL, HANDLES(put));
-    if (k->state == FINISHED)
-        return;
-    switch (request->id) {
-        CASE_EFFECT(request, put, {
+    seff_request_t req = seff_handle(k, NULL, HANDLES(put));
+    switch (req.effect) {
+        CASE_EFFECT(req, put, {
             dummy();
             handle(k);
             dummy();
         });
+        CASE_RETURN(req, { return; });
     }
 }
 

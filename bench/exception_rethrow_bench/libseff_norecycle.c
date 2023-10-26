@@ -18,8 +18,8 @@ void *computation(seff_coroutine_t *self, void *_arg) {
         THROW(runtime_error, "error");
     } else {
         seff_coroutine_t *k = seff_coroutine_new(computation, (void *)(depth - 1));
-        seff_eff_t *exn = seff_handle(k, NULL, HANDLES(runtime_error));
-        switch (exn->id) {
+        seff_request_t exn = seff_handle(k, NULL, HANDLES(runtime_error));
+        switch (exn.effect) {
             CASE_EFFECT(exn, runtime_error, {
                 caught++;
                 seff_coroutine_delete(k);
@@ -36,8 +36,8 @@ void *computation(seff_coroutine_t *self, void *_arg) {
 int main(void) {
     for (size_t i = 0; i < 100000; i++) {
         seff_coroutine_t *k = seff_coroutine_new(computation, (void *)(MAX_DEPTH - 1));
-        seff_eff_t *exn = seff_handle(k, NULL, HANDLES(runtime_error));
-        switch (exn->id) {
+        seff_request_t exn = seff_handle(k, NULL, HANDLES(runtime_error));
+        switch (exn.effect) {
             CASE_EFFECT(exn, runtime_error, {
                 caught++;
                 break;

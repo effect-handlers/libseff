@@ -58,13 +58,14 @@ int64_t bench(int n_workers, int depth) {
 
     int64_t total = 0;
 
-    seff_eff_t *eff = seff_handle(root, NULL, HANDLES(yield_int));
-    while (root->state != FINISHED) {
-        switch (eff->id) {
+    seff_request_t eff = seff_handle(root, NULL, HANDLES(yield_int));
+    while (true) {
+        switch (eff.effect) {
             CASE_EFFECT(eff, yield_int, {
                 total += payload.value;
                 break;
             });
+            CASE_RETURN(eff, { return total; });
         default:
             assert(false);
         }

@@ -19,24 +19,21 @@ long SegsEffectSingleLookup(int v[], size_t v_size, int lookups[], size_t lookup
         bool finished = false;
         int64_t last_read = 0;
         while (!finished) {
-            seff_eff_t *request =
-                seff_handle(coro, (void *)last_read, HANDLES(deref));
-
-            if (coro->state == FINISHED) {
-                bool res = (bool) request ? 1 : 0;
-                found_count += res;
-                not_found_count += 1 - res;
-                finished = true;
-                seff_coroutine_delete(coro);
-            } else {
-                switch (request->id) {
-                    CASE_EFFECT(request, deref, {
-                        last_read = *payload.addr;
-                        break;
-                    });
-                }
+            seff_request_t request = seff_handle(coro, (void *)last_read, HANDLES(deref));
+            switch (request.effect) {
+                CASE_RETURN(request, {
+                    bool res = (bool)payload.result ? 1 : 0;
+                    found_count += res;
+                    not_found_count += 1 - res;
+                    finished = true;
+                    seff_coroutine_delete(coro);
+                    break;
+                });
+                CASE_EFFECT(request, deref, {
+                    last_read = *payload.addr;
+                    break;
+                });
             }
-
         }
     }
 

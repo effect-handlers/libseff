@@ -8,7 +8,7 @@ void execute(size_t meetings, colour *creatures, size_t creaturesSize) {
     printf("\n");
 
     seff_coroutine_t **chms = calloc(creaturesSize, sizeof(seff_coroutine_t *));
-    seff_eff_t **reqs = calloc(creaturesSize, sizeof(seff_eff_t *));
+    seff_request_t *reqs = calloc(creaturesSize, sizeof(seff_request_t));
     chameneos_init_effect_t *inits = calloc(creaturesSize, sizeof(chameneos_init_effect_t));
 
     for (size_t i = 0; i < creaturesSize; ++i) {
@@ -34,14 +34,14 @@ void execute(size_t meetings, colour *creatures, size_t creaturesSize) {
         uint64_t chameneosB;
         colour colB;
 
-        switch (reqs[a]->id) {
+        switch (reqs[a].effect) {
             CASE_EFFECT(reqs[a], meet, {
                 chameneosA = payload.self;
                 colA = payload.msg;
             })
         };
 
-        switch (reqs[b]->id) {
+        switch (reqs[b].effect) {
             CASE_EFFECT(reqs[b], meet, {
                 chameneosB = payload.self;
                 colB = payload.msg;
@@ -66,7 +66,7 @@ void execute(size_t meetings, colour *creatures, size_t creaturesSize) {
         chameneos_meet_t meetMsg;
         meetMsg.finish = true;
         // First resume
-        total_meetings += (uint64_t)seff_handle(chms[i], (void *)&meetMsg, HANDLES(meet));
+        total_meetings += (uint64_t)seff_handle(chms[i], (void *)&meetMsg, HANDLES(meet)).payload;
     }
 
     spell_int(total_meetings);

@@ -32,7 +32,7 @@
 
 extern __thread seff_coroutine_t *_seff_current_coroutine;
 
-void *seff_resume(seff_coroutine_t *k, void *arg) { return seff_handle(k, arg, ~0); }
+seff_request_t seff_resume(seff_coroutine_t *k, void *arg) { return seff_handle(k, arg, ~0); }
 
 void frame_push(seff_cont_t *cont, void *elt) {
     cont->rsp = (char *)cont->rsp - sizeof(void *);
@@ -87,6 +87,7 @@ bool seff_coroutine_init(seff_coroutine_t *k, seff_start_fun_t *fn, void *arg) {
     return seff_coroutine_init_sized(k, fn, arg, default_frame_size);
 }
 
+E __attribute__((noreturn, no_split_stack)) void coroutine_prelude(void);
 bool seff_coroutine_init_sized(
     seff_coroutine_t *k, seff_start_fun_t *fn, void *arg, size_t frame_size) {
     char *rsp;
@@ -128,13 +129,17 @@ bool seff_coroutine_init_sized(
 seff_coroutine_t *seff_locate_handler(effect_id effect) {
     effect_set mask = 1 << effect;
     seff_coroutine_t *k = _seff_current_coroutine;
-    while (k && !(k->handled_effects & mask)) {
-        k = (seff_coroutine_t *)k->parent_coroutine;
+    if (effect != EFF_ID(return)) {
+        // Thee special 'return' effect is implicitly handled by every coroutine
+        while (k && !(k->handled_effects & mask)) {
+            k = (seff_coroutine_t *)k->parent_coroutine;
+        }
     }
     return k;
 }
 
-default_handler_t *default_handlers[MAX_EFFECTS] = {0};
+void *unhandled_effect_handler(void *payload) { exit(-1); }
+default_handler_t *default_handlers[MAX_EFFECTS] = {unhandled_effect_handler};
 
 default_handler_t *seff_set_default_handler(effect_id effect, default_handler_t *handler) {
     default_handler_t *prev = default_handlers[effect];
@@ -144,13 +149,11 @@ default_handler_t *seff_set_default_handler(effect_id effect, default_handler_t 
 
 default_handler_t *seff_get_default_handler(effect_id effect) { return default_handlers[effect]; }
 
-void seff_throw(effect_id eff_id, void *payload) {
-    seff_eff_t e;
-    e.id = eff_id;
-    e.payload = payload;
+void seff_throw(effect_id eff_id, void* payload) {
+    // The state code is set by seff_exit
     seff_coroutine_t *handler = seff_locate_handler(eff_id);
     if (handler) {
-        seff_return(handler, &e);
+        seff_exit(handler, eff_id, payload);
     } else {
         /* Execute the handler in-place, since default handlers are not allowed to pause the
          * coroutine */

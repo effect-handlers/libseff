@@ -33,10 +33,9 @@ void *chameneos_wrapper(seff_coroutine_t *k, struct actor_t *self) {
 
     seff_coroutine_t *cham = seff_coroutine_new(chameneos, (void *)&effect_info);
     // First resume, we assume it's not expecting anything
-    seff_eff_t *mate = seff_handle(cham, (void *)NULL, HANDLES(meet));
-
-    while (cham->state != FINISHED) {
-        switch (mate->id) {
+    seff_request_t mate = seff_handle(cham, (void *)NULL, HANDLES(meet));
+    while (true) {
+        switch (mate.effect) {
             CASE_EFFECT(mate, meet, {
                 //  send meet request
                 broker_message_t *msg = malloc(sizeof(broker_message_t));
@@ -62,18 +61,19 @@ void *chameneos_wrapper(seff_coroutine_t *k, struct actor_t *self) {
                 mate = seff_handle(cham, (void *)&meetMsg, HANDLES(meet));
                 break;
             });
+            CASE_RETURN(mate, {
+                // send final counter and finish
+                broker_message_t *msg = malloc(sizeof(broker_message_t));
+                msg->finish = true;
+                msg->payload.final_meetings = (int)mate.payload;
+                actor_send(broker, msg);
+
+                return NULL;
+            });
         default:
             assert(false);
         }
     }
-
-    // send final counter and finish
-    broker_message_t *msg = malloc(sizeof(broker_message_t));
-    msg->finish = true;
-    msg->payload.final_meetings = (uintptr_t)mate;
-    actor_send(broker, msg);
-
-    return NULL;
 }
 
 typedef struct {

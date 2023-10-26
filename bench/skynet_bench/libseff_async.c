@@ -178,73 +178,72 @@ void *worker_thread(void *_self) {
             coroutine_arg = NULL;
         }
 
-        seff_eff_t *request = (seff_eff_t *)seff_handle(
-            current_task->coroutine, coroutine_arg, HANDLES(async) | HANDLES(await));
-        if (current_task->coroutine->state == FINISHED) {
-            debug(self->return_requests++);
-            future_t *promise = current_task->promise;
+        seff_request_t request =
+            seff_handle(current_task->coroutine, coroutine_arg, HANDLES(async) | HANDLES(await));
+        switch (request.effect) {
+            CASE_RETURN(request, {
+                debug(self->return_requests++);
+                future_t *promise = current_task->promise;
 
-            /* Spin until the future can be acquired */
-            SPINLOCK(&promise->blocked, {
-                promise->result = (int64_t)(request);
-                promise->state = READY;
+                /* Spin until the future can be acquired */
+                SPINLOCK(&promise->blocked, {
+                    promise->result = (int64_t)payload.result;
+                    promise->state = READY;
 
-                task_t *waiter = promise->waiter;
-                if (waiter != NULL) {
-                    debug(self->self_task_push++);
-                    cl_queue_push(&self->task_queue, waiter);
-                }
+                    task_t *waiter = promise->waiter;
+                    if (waiter != NULL) {
+                        debug(self->self_task_push++);
+                        cl_queue_push(&self->task_queue, waiter);
+                    }
+                });
+
+                debug({
+                    int64_t n_tasks = RELAXED(load, remaining_tasks);
+                    int64_t max_tasks = RELAXED(load, &self->scheduler->max_tasks);
+                    if (n_tasks > max_tasks) {
+                        RELAXED(store, &self->scheduler->max_tasks, n_tasks);
+                    }
+                });
+                seff_coroutine_delete(current_task->coroutine);
+                free(current_task);
+                atomic_fetch_sub_explicit(remaining_tasks, 1, memory_order_relaxed);
+                break;
             });
-
-#ifndef NDEBUG
-            int64_t n_tasks = RELAXED(load, remaining_tasks);
-            int64_t max_tasks = RELAXED(load, &self->scheduler->max_tasks);
-            if (n_tasks > max_tasks) {
-                RELAXED(store, &self->scheduler->max_tasks, n_tasks);
-            }
-#endif
-            seff_coroutine_delete(current_task->coroutine);
-            free(current_task);
-            atomic_fetch_sub_explicit(remaining_tasks, 1, memory_order_relaxed);
-        } else {
-            switch (request->id) {
-                CASE_EFFECT(request, await, {
-                    debug(self->await_requests++);
-                    future_t *awaited = payload.fut;
-                    SPINLOCK(&awaited->blocked, {
-                        current_task->waiting = payload.fut;
-                        if (payload.fut->state == READY) {
-                            debug(self->self_task_push++);
-                            cl_queue_push(&self->task_queue, current_task);
-                        } else {
-                            payload.fut->waiter = current_task;
-                        }
-                    });
-                    break;
+            CASE_EFFECT(request, await, {
+                debug(self->await_requests++);
+                future_t *awaited = payload.fut;
+                SPINLOCK(&awaited->blocked, {
+                    current_task->waiting = payload.fut;
+                    if (payload.fut->state == READY) {
+                        debug(self->self_task_push++);
+                        cl_queue_push(&self->task_queue, current_task);
+                    } else {
+                        payload.fut->waiter = current_task;
+                    }
                 });
-                CASE_EFFECT(request, async, {
-                    debug(self->async_requests++);
-                    atomic_fetch_add_explicit(remaining_tasks, 1, memory_order_relaxed);
+                break;
+            });
+            CASE_EFFECT(request, async, {
+                debug(self->async_requests++);
+                atomic_fetch_add_explicit(remaining_tasks, 1, memory_order_relaxed);
 
-                    payload.promise->state = WAITING;
-                    payload.promise->waiter = NULL;
-                    payload.promise->blocked = false;
+                payload.promise->state = WAITING;
+                payload.promise->waiter = NULL;
+                payload.promise->blocked = false;
 
-                    seff_coroutine_t *k =
-                        seff_coroutine_new_sized(payload.fn, payload.arg, STACK_SIZE);
-                    task_t *new_task = (task_t *)malloc(sizeof(task_t));
-                    new_task->coroutine = k;
-                    new_task->promise = payload.promise;
-                    new_task->waiting = NULL;
+                seff_coroutine_t *k = seff_coroutine_new_sized(payload.fn, payload.arg, STACK_SIZE);
+                task_t *new_task = (task_t *)malloc(sizeof(task_t));
+                new_task->coroutine = k;
+                new_task->promise = payload.promise;
+                new_task->waiting = NULL;
 
-                    debug(self->self_task_push += 2);
-                    cl_queue_push(&self->task_queue, new_task);
-                    cl_queue_push(&self->task_queue, current_task);
-                    break;
-                });
-            default:
-                assert(false);
-            }
+                debug(self->self_task_push += 2);
+                cl_queue_push(&self->task_queue, new_task);
+                cl_queue_push(&self->task_queue, current_task);
+                break;
+            });
+        default:
+            assert(false);
         }
     }
 
