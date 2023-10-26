@@ -1,5 +1,5 @@
-all:  output/libseff_fixed output/libseff_baseline output/libseff_hot_split output/libseff_red_zone
-dumps: output/libseff_fixed.dmp output/libseff_baseline.dmp output/libseff_hot_split.dmp output/libseff_red_zone.dmp
+all:  output/libseff_fixed output/libseff_baseline output/libseff_hot_split output/libseff_red_zone output/native
+dumps: output/libseff_fixed.dmp output/libseff_baseline.dmp output/libseff_hot_split.dmp output/libseff_red_zone.dmp output/native.dmp
 
 .PHONY: bench
 
@@ -19,6 +19,9 @@ output/libseff_hot_split: libseff_hot_split.c $(LIBSEFF_SEGMENTED_LINK_LIBS) | o
 output/libseff_red_zone: libseff_red_zone.c $(LIBSEFF_SEGMENTED_LINK_LIBS) | output
 	$(CC) $(CFLAGS_LIBSEFF_SEGMENTED) libseff_red_zone.c -o $@ $(LDFLAGS_LIBSEFF_SEGMENTED)
 
+output/native: native.c | output
+	$(CC) $(CFLAGS) native.c -o $@ $(LDFLAGS)
+
 output/%.dmp: output/% FORCE | output
 	objdump -S --disassemble=bottom $< > $@
 
@@ -26,4 +29,7 @@ output/%.dmp: output/% FORCE | output
 output/bench-libseff.json: all FORCE | output
 	hyperfine -L "variation" _fixed,_baseline,_hot_split,_red_zone -w5  --export-json $@ -n "libseff" "output/libseff{variation}"
 
-bench: output/bench-libseff.json
+output/bench-native.json: native FORCE | output
+	hyperfine -L "variation" "" -w5  --export-json $@ -n "native" "output/native{variation}"
+
+bench: output/bench-libseff.json output/bench-native.json
