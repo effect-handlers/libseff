@@ -2,7 +2,7 @@ all: output/libscheff
 
 include ../common.mk
 
-output/%: %.c $(LIBSEFF_LIB) $(PICOHTTP_LIB) | output
+output/%: %.c $(LIBSEFF_SEGMENTED_LINK_LIBS) $(PICOHTTP_LIB) | output
 	$(CC) $(CFLAGS_LIBSEFF_SEGMENTED) $(PICOHTTP_INCLUDE_DIRS) $< $(PICOHTTP_LIB) -o $@ $(LDFLAGS_LIBSEFF_SEGMENTED)
 
 output/cohttp_eio: external/retro-httpaf-bench/cohttp-eio | output

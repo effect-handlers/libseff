@@ -14,14 +14,14 @@ output/coro: external/coro.cpp external/coro_infra.h external/runner.hpp externa
 output/runner_c.o: external/runner_c.cpp external/runner.hpp  external/rng.h| output
 	$(CXX) $(CXXFLAGS) -fcoroutines-ts -std=c++2a -stdlib=libc++ -o $@ -c external/runner_c.cpp
 
-output/libseff: libseff.c output/runner_c.o $(LIBSEFF_LIB) | output
+output/libseff: libseff.c output/runner_c.o $(LIBSEFF_SEGMENTED_LINK_LIBS) | output
 	$(CC) $(CFLAGS_LIBSEFF_SEGMENTED) -o output/libseff.o -c libseff.c
 	$(CXX) $(CXXFLAGS) -stdlib=libc++ -o $@ output/libseff.o output/runner_c.o $(LDFLAGS_LIBSEFF_SEGMENTED)
 
-output/libseff_effect_coro: libseff_effect_coro.c libseff_effect_common.h output/runner_c.o $(LIBSEFF_LIB) | output
+output/libseff_effect_coro: libseff_effect_coro.c libseff_effect_common.h output/runner_c.o $(LIBSEFF_SEGMENTED_LINK_LIBS) | output
 	$(CC) $(CFLAGS_LIBSEFF_SEGMENTED) -o output/libseff_effect_coro.o -c libseff_effect_coro.c
 	$(CXX) $(CXXFLAGS) -stdlib=libc++ -o $@ output/libseff_effect_coro.o output/runner_c.o $(LDFLAGS_LIBSEFF_SEGMENTED)
 
-output/libseff_effect_naive: libseff_effect_naive.c libseff_effect_common.h output/runner_c.o $(LIBSEFF_LIB) | output
+output/libseff_effect_naive: libseff_effect_naive.c libseff_effect_common.h output/runner_c.o $(LIBSEFF_SEGMENTED_LINK_LIBS) | output
 	$(CC) $(CFLAGS_LIBSEFF_SEGMENTED) -o output/libseff_effect_naive.o -c libseff_effect_naive.c
 	$(CXX) $(CXXFLAGS) -stdlib=libc++ -o $@ output/libseff_effect_naive.o output/runner_c.o $(LDFLAGS_LIBSEFF_SEGMENTED)
