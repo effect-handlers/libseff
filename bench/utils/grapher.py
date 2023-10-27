@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from itertools import chain, repeat
 
 
 def getParamName(results):
@@ -33,8 +34,9 @@ styles = {
     }
 }
 
-markers = iter(["v", "^", "s", "D", "p", "|", "x"])
-colours = iter(["blue", "gray", "magenta", "yellow", "green", "orange", "black"])
+markers = chain.from_iterable(repeat(["v", "^", "s", "D", "p", "|", "x"]))
+colours = chain.from_iterable(repeat(["blue", "gray", "magenta", "yellow", "green", "orange"]))
+
 
 def getStyle(label):
     if label not in styles:
@@ -69,4 +71,20 @@ def grapher(results, ax=plt, parameter_name = None):
 
     ax.legend()
     ax.set_xlabel(parameter_name)
+    ax.set_ylabel(results[0]['unit'])
+
+
+def grapher_paramless(results, ax=plt):
+    zipped = [(r['label'], r['parameters']['variation'], float(r['measurement']), float(r['stddev'])) for r in results]
+    zipped = sorted(zipped, key=lambda x: x[2])
+    labels = {}
+    for (l, p, m, s) in zipped:
+        # unzipped = list(zip(*zipped))
+        style = getStyle(l)
+        ax.errorbar([f"{l}[{p}]"], [m], [s], fmt='o', label=l if l not in labels else None, linewidth=2, capsize=6, **style)
+        labels[l] = 1
+
+    ax.set_xlabel("Benchmarks")
+    plt.setp(ax.get_xticklabels(), ha="right", rotation=45)
+
     ax.set_ylabel(results[0]['unit'])
