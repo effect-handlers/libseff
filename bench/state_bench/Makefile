@@ -1,4 +1,4 @@
-all: all_libseff all_native all_cpp-effects all_libhandler all_libmpeff all_libmprompt all_cppcoro
+all: all_libseff all_native all_cpp-effects all_libhandler all_libmpeff all_libmprompt all_cppcoro all_libco
 all_libseff: output/libseff output/libseff_direct
 all_native: output/c
 all_cpp-effects: output/cpp-effects output/cpp-effects_plain
@@ -7,6 +7,7 @@ all_libhandler: output/libhandler_tail_noop output/libhandler_tail  output/libha
 # output/libhandler_scoped Removed since there appears to be a bug
 all_libmpeff: output/libmpeff_tail_noop output/libmpeff_tail output/libmpeff_scoped_once output/libmpeff_scoped output/libmpeff_once output/libmpeff_multi
 all_libmprompt: output/libmprompt
+all_libco: output/libco
 
 include ../common.mk
 
@@ -74,6 +75,9 @@ output/cppcoro_async_generator: cppcoro_async_generator.cpp $(CPPCORO_LIB) | out
 output/cppcoro_recursive_generator: cppcoro_recursive_generator.cpp $(CPPCORO_LIB) | output
 	$(CXX) $(CXXFLAGS_CPPCORO) cppcoro_recursive_generator.cpp -o $@ $(LDFLAGS_CPPCORO)
 
+output/libco: libco.cpp $(LIBCO_LIB) | output
+	$(CXX) $(CXXFLAGS_LIBCO) libco.cpp -o $@ $(LDFLAGS_LIBCO)
+
 .PHONY: bench
 
 FORCE:
@@ -98,6 +102,9 @@ output/bench-libmpeff.json: all_libmpeff FORCE | output
 
 output/bench-libmprompt.json: all_libmprompt FORCE | output
 	hyperfine -L "variation" "" -w5  --export-json $@ -n "libmprompt" "output/libmprompt{variation}"
+
+output/bench-libco.json: all_libco FORCE | output
+	hyperfine -L "variation" "" -w5  --export-json $@ -n "libco" "output/libco{variation}"
 
 
 
