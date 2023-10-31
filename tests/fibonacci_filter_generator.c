@@ -8,7 +8,8 @@
         seff_coroutine_t *base_generator;                                            \
         decorator_data                                                               \
     } decorator_name##_args;                                                         \
-    void *decorator_name(seff_coroutine_t *self, void *_args) {                      \
+    void *decorator_name(void *_args) {                                              \
+        seff_coroutine_t *self = seff_current_coroutine();                           \
         decorator_name##_args args = *(decorator_name##_args *)_args;                \
         while (true) {                                                               \
             seff_request_t res = seff_resume(args.base_generator, NULL);             \
@@ -21,7 +22,8 @@
         }                                                                            \
     }
 
-void *fibonacci_generator(seff_coroutine_t *self, void *arg) {
+void *fibonacci_generator(void *arg) {
+    seff_coroutine_t *self = seff_current_coroutine();
     // The upper limit is passed to the coroutine as a void*
     int64_t a = 1, b = 0;
     while (true) {

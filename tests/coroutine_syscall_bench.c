@@ -9,7 +9,7 @@ void heavy_incr(void) {
     counter++;
 }
 
-void *coroutine(seff_coroutine_t *k, void *arg) {
+void *coroutine(void *arg) {
     int reps = 100000000;
     while (reps--) {
         heavy_incr();

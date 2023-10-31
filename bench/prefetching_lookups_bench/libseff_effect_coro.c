@@ -2,7 +2,7 @@
 #include "seff.h"
 #include <stdio.h>
 
-long SegsEffectMultiLookup(
+long SeffEffectMultiLookup(
     int v[], size_t v_size, int lookups[], size_t lookups_size, int streams) {
 
     size_t found_count = 0;
@@ -13,7 +13,7 @@ long SegsEffectMultiLookup(
     coro_queue_init(&q);
     const size_t coro_size = 4096;
 
-    seg_args *args = calloc(lookups_size, sizeof(seg_args));
+    search_args *args = calloc(lookups_size, sizeof(search_args));
 
     for (size_t i = 0; i < lookups_size; ++i) {
         args[i].first = v;
@@ -25,9 +25,9 @@ long SegsEffectMultiLookup(
         while (next_arg < lookups_size && limit > 0) {
             limit--;
             seff_coroutine_t *coro = seff_coroutine_new_sized(
-                SegEffectBinarySearch, (void *)(args + next_arg), coro_size);
+                SeffEffectBinarySearch, (void *)(args + next_arg), coro_size);
             next_arg++;
-            // We assume SegBinarySearch will copy the values right after the first resume
+            // We assume SeffBinarySearch will copy the values right after the first resume
             //   seff_resume(coro, NULL);
             coro_queue_enqueue(&q, (task_t){coro, NULL});
         }
@@ -87,8 +87,8 @@ long SegsEffectMultiLookup(
     return found_count;
 }
 
-long testSegsEffMulti(int v[], size_t v_size, int lookups[], size_t lookups_size, int streams) {
-    return SegsEffectMultiLookup(v, v_size, lookups, lookups_size, streams);
+long testSeffEffMulti(int v[], size_t v_size, int lookups[], size_t lookups_size, int streams) {
+    return SeffEffectMultiLookup(v, v_size, lookups, lookups_size, streams);
 }
 
 int runner_c(long (*testFn)(int[], size_t, int[], size_t, int), int streams, const char *algo_name);
@@ -101,5 +101,5 @@ int main(int argc, const char **argv) {
     }
 
     // 8 seems to be optimal
-    return runner_c(testSegsEffMulti, streams, "seff");
+    return runner_c(testSeffEffMulti, streams, "seff");
 }

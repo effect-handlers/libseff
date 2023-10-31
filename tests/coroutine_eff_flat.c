@@ -9,15 +9,16 @@
 #define PRINT_CODE 0
 #define READ_CODE 1
 
-void *effectful_body(seff_coroutine_t *k, void *args) {
+void *effectful_body(void *args) {
     // perform(read)
+    seff_coroutine_t *self = seff_current_coroutine();
 
     while (1) {
-        seff_yield(k, READ_CODE, NULL);
+        seff_yield(self, READ_CODE, NULL);
         // printf("[COROUTINE]: Received %s\n", result);
 
         char *msg = "Thanks for your message!";
-        seff_yield(k, PRINT_CODE, msg);
+        seff_yield(self, PRINT_CODE, msg);
     }
 
     return NULL;

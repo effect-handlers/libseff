@@ -98,10 +98,10 @@ void actor_send(actor_t *target, void *msg) {
     return;
 }
 
-void *actor_thread(seff_coroutine_t *k, void *_arg) {
+void *actor_thread(void *_arg) {
     actor_t *self = (actor_t *)_arg;
 
-    return self->behavior(k, self);
+    return self->behavior(self);
 }
 
 actor_t *fork_actor(actor_fn_t *behavior) {

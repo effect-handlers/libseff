@@ -5,7 +5,7 @@ void hello(void) { printf("Hello world! I am a %s!\n", "coroutine"); }
 
 MAKE_SYSCALL_WRAPPER(void, hello, void);
 
-void *coroutine(seff_coroutine_t *k, void *arg) {
+void *coroutine(void *arg) {
     hello_syscall_wrapper();
     return NULL;
 }

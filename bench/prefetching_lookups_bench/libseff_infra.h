@@ -16,11 +16,11 @@ typedef struct coro_queue {
     int64_t size;
 } coro_queue;
 
-typedef struct seg_args {
+typedef struct search_args {
     int const *first;
     size_t len;
     int key;
-} seg_args;
+} search_args;
 
 // Prefetch
 void prefetch_c(const char *x) { _mm_prefetch(x, _MM_HINT_NTA); }

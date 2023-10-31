@@ -1,7 +1,7 @@
 #pragma once
 
-#include "seff.h"
 #include "chameneos_common.h"
+#include "seff.h"
 
 typedef struct {
     bool finish;
@@ -9,7 +9,7 @@ typedef struct {
     colour col;
 } chameneos_meet_t;
 
-DEFINE_EFFECT(meet, 21, chameneos_meet_t*, {
+DEFINE_EFFECT(meet, 21, chameneos_meet_t *, {
     uint64_t self;
     colour msg;
 });
@@ -19,9 +19,9 @@ typedef struct {
     colour col;
 } chameneos_init_effect_t;
 
-void * chameneos(seff_coroutine_t *k, void *arg){
+void *chameneos(void *arg) {
     // receive initial info
-    chameneos_init_effect_t *info = (chameneos_init_effect_t*) arg;
+    chameneos_init_effect_t *info = (chameneos_init_effect_t *)arg;
     colour self_col = info->col;
     uint64_t self_id = info->self;
 
@@ -31,7 +31,7 @@ void * chameneos(seff_coroutine_t *k, void *arg){
     // loop
     while (1) {
         //  send meet request and receive mate
-        chameneos_meet_t* mate = PERFORM(meet, self_id, self_col);
+        chameneos_meet_t *mate = PERFORM(meet, self_id, self_col);
 
         if (mate->finish) {
             // received end message
@@ -51,5 +51,5 @@ void * chameneos(seff_coroutine_t *k, void *arg){
     printf("%lu ", meetings);
     spell_int(self_meetings);
 
-    return (void*) meetings;
+    return (void *)meetings;
 }

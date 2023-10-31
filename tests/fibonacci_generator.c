@@ -3,7 +3,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
-void *fibonacci_generator(seff_coroutine_t *self, void *arg) {
+void *fibonacci_generator(void *arg) {
+    seff_coroutine_t *self = seff_current_coroutine();
     // The upper limit is passed to the coroutine as a void*
     int64_t limit = (int64_t)arg;
     int64_t a = 1, b = 0;

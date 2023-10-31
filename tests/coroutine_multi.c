@@ -20,7 +20,7 @@ typedef struct {
 
 bool const_true(void *_arg) { return true; }
 
-void *compute_square_root(seff_coroutine_t *self, void *_state) {
+void *compute_square_root(void *_state) {
     coroutine_state state = *(coroutine_state *)_state;
     float guess = state.x;
 

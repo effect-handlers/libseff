@@ -8,7 +8,7 @@ DEFINE_EFFECT(get, 1, int64_t, {});
 void put(seff_coroutine_t *handler, int64_t number) { YIELD(handler, put, number); }
 int64_t get(seff_coroutine_t *handler) { return YIELD(handler, get); }
 
-void *stateful(seff_coroutine_t *self, void *_arg) {
+void *stateful(void *_arg) {
     seff_coroutine_t *put_handler = seff_locate_handler(EFF_ID(put));
     seff_coroutine_t *get_handler = seff_locate_handler(EFF_ID(get));
     for (int i = 0; i < 10000000; i++) {

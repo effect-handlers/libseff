@@ -48,7 +48,7 @@ void *with_output_to_default(seff_start_fun_t *fn, void *arg) {
     return res.payload;
 }
 
-void *printer(seff_coroutine_t *self, void *arg) {
+void *printer(void *arg) {
     print("Hello, ");
     print("World!\n");
     return NULL;

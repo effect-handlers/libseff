@@ -205,8 +205,7 @@ coroutine_prelude:
     .cfi_offset r14, seff_cont_t__r14
     .cfi_offset r15, seff_cont_t__r15
 
-    movq %r13, %rdi
-    movq %r14, %rsi
+    movq %r14, %rdi
     # Since rdi is a scratch register, from now our CFA relates to some position in memory
     # Note that this instruction is executed when unwinding from below this line, with whatever $rdi
     # has at that moment

@@ -6,12 +6,12 @@
 DEFINE_EFFECT(put, 0, void, { int64_t value; });
 DEFINE_EFFECT(get, 1, int64_t, {});
 
-void put(seff_coroutine_t *self, int64_t number) { PERFORM(put, number); }
-int64_t get(seff_coroutine_t *self) { return PERFORM(get); }
+void put(int64_t number) { PERFORM(put, number); }
+int64_t get() { return PERFORM(get); }
 
-void *stateful(seff_coroutine_t *self, void *_arg) {
+void *stateful(void *_arg) {
     for (int i = 0; i < 10000000; i++) {
-        put(self, get(self) + 1);
+        put(get() + 1);
     }
     return NULL;
 }

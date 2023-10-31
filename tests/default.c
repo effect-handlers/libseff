@@ -13,7 +13,7 @@ int safe_division(int dividend, int divisor) {
     return dividend / divisor;
 }
 
-void *safe_computation(seff_coroutine_t *self, void *_arg) {
+void *safe_computation(void *_arg) {
     for (int i = -5; i < 5; i++) {
         safe_division(100, i);
     }

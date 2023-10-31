@@ -6,7 +6,7 @@
 
 DEFINE_EFFECT(put, 0, void, { int x; });
 
-void *effectful(seff_coroutine_t *self, void *arg) {
+void *effectful(void *arg) {
     size_t iters = (size_t)arg;
     for (size_t i = 0; i < iters; i++) {
         PERFORM(put, i);
@@ -23,6 +23,7 @@ void handle(seff_coroutine_t *k) {
             dummy();
             handle(k);
             dummy();
+            break;
         });
         CASE_RETURN(req, { return; });
     }

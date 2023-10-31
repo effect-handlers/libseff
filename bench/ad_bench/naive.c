@@ -50,7 +50,7 @@ prop_t r_m(prop_t x, prop_t y) { return *PERFORM(r_ap2, multiply_op, x, y); }
 prop_t *result;
 prop_t *x;
 
-void *example(seff_coroutine_t *self, void *args) {
+void *example(void *args) {
     size_t iters = (size_t)args;
 
     printf("iters: %lu\n", iters);
@@ -176,7 +176,7 @@ void handle(seff_coroutine_t *k, prop_t *response) {
     }
 }
 
-void *reverse(seff_coroutine_t *toplevel_handler, void *args) {
+void *reverse(void *args) {
     seff_coroutine_t *child = seff_coroutine_new(example, args);
 
     handle(child, NULL);

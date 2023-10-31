@@ -82,7 +82,7 @@ MAKE_SYSCALL_WRAPPER(int, phr_structed, phr_parse_args *);
 #define BUF_SIZE 64 * 1024
 #define MAX_HEADERS 100
 _Atomic int n_connections = 1;
-void *connection_fun(seff_coroutine_t *self, void *_arg) {
+void *connection_fun(void *_arg) {
 #ifndef NDEBUG
     int connection_id = atomic_fetch_add(&n_connections, 1);
 #endif
@@ -199,7 +199,7 @@ typedef struct {
     const char *port;
 } listener_args;
 
-void *listener_fun(seff_coroutine_t *self, void *_arg) {
+void *listener_fun(void *_arg) {
     listener_args *args = (listener_args *)_arg;
     int socket_fd = listen_tcp_socket(args->ip, args->port, true, true, true, 1024);
     if (socket_fd == -1) {

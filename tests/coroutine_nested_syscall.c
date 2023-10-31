@@ -8,7 +8,7 @@ void heavy_hello(void) {
     puts("Hello world! I am a coroutine!");
 }
 
-void *deep_hello(seff_coroutine_t *k, void *_arg) {
+void *deep_hello(void *_arg) {
     int64_t arg = (int64_t)_arg;
     if (arg--) {
         seff_coroutine_t *q = seff_coroutine_new(deep_hello, (void *)arg);

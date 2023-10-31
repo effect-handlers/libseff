@@ -2,8 +2,9 @@
 #include "seff.h"
 #include <stdio.h>
 
-void *SegBinarySearch(seff_coroutine_t *self, void *_arg) {
-    seg_args *arg = (seg_args *)_arg;
+void *SeffBinarySearch(void *_arg) {
+    seff_coroutine_t *self = seff_current_coroutine();
+    search_args *arg = (search_args *)_arg;
     int const *first = arg->first;
     size_t len = arg->len;
     int val = arg->key;
@@ -29,7 +30,7 @@ void *SegBinarySearch(seff_coroutine_t *self, void *_arg) {
     return (void *)0;
 }
 
-long SegsMultiLookup(int v[], size_t v_size, int lookups[], size_t lookups_size, int streams) {
+long SeffMultiLookup(int v[], size_t v_size, int lookups[], size_t lookups_size, int streams) {
 
     size_t found_count = 0;
     size_t not_found_count = 0;
@@ -39,7 +40,7 @@ long SegsMultiLookup(int v[], size_t v_size, int lookups[], size_t lookups_size,
     coro_queue_init(&q);
     const size_t coro_size = 256;
 
-    seg_args *args = calloc(lookups_size, sizeof(seg_args));
+    search_args *args = calloc(lookups_size, sizeof(search_args));
 
     for (size_t i = 0; i < lookups_size; ++i) {
         args[i].first = v;
@@ -51,7 +52,7 @@ long SegsMultiLookup(int v[], size_t v_size, int lookups[], size_t lookups_size,
         while (next_arg < lookups_size && limit > 0) {
             limit--;
             seff_coroutine_t *coro =
-                seff_coroutine_new_sized(SegBinarySearch, (void *)(args + next_arg), coro_size);
+                seff_coroutine_new_sized(SeffBinarySearch, (void *)(args + next_arg), coro_size);
             next_arg++;
             coro_queue_enqueue(&q, (task_t){coro, NULL});
         }
@@ -102,8 +103,8 @@ long SegsMultiLookup(int v[], size_t v_size, int lookups[], size_t lookups_size,
 
 int runner_c(long (*testFn)(int[], size_t, int[], size_t, int), int streams, const char *algo_name);
 
-long testSegs(int v[], size_t v_size, int lookups[], size_t lookups_size, int streams) {
-    return SegsMultiLookup(v, v_size, lookups, lookups_size, streams);
+long testSeff(int v[], size_t v_size, int lookups[], size_t lookups_size, int streams) {
+    return SeffMultiLookup(v, v_size, lookups, lookups_size, streams);
 }
 
 int main(int argc, const char **argv) {
@@ -114,5 +115,5 @@ int main(int argc, const char **argv) {
     }
 
     // 8 seems to be optimal
-    return runner_c(testSegs, streams, "seff");
+    return runner_c(testSeff, streams, "seff");
 }

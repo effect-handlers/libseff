@@ -32,6 +32,8 @@
 #define E
 #endif
 
+typedef void *(seff_start_fun_t)(void *);
+
 E bool seff_coroutine_init(seff_coroutine_t *, seff_start_fun_t *, void *);
 E bool seff_coroutine_init_sized(seff_coroutine_t *, seff_start_fun_t *, void *, size_t);
 E void seff_coroutine_release(seff_coroutine_t *);
@@ -138,7 +140,7 @@ static inline bool seff_finished(seff_request_t req) { return req.effect == EFF_
 #define ASSERT_HANDLES(coroutine, name)
 #endif
 
-#define YIELD(coroutine, name, ...)                                          \
+#define YIELD(coroutine, name, ...)                                                   \
     ({                                                                                \
         EFF_PAYLOAD_T(name) __payload = (EFF_PAYLOAD_T(name)){__VA_ARGS__};           \
         ASSERT_HANDLES(coroutine, name);                                              \
@@ -150,4 +152,11 @@ static inline bool seff_finished(seff_request_t req) { return req.effect == EFF_
         EFF_PAYLOAD_T(name) __payload = {__VA_ARGS__}; \
         seff_throw(EFF_ID(name), &__payload);          \
     })
+
+#define EXIT(coroutine, name, ...)                     \
+    ({                                                 \
+        EFF_PAYLOAD_T(name) __payload = {__VA_ARGS__}; \
+        seff_exit(EFF_ID(name), &__payload);           \
+    })
+
 #endif

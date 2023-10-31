@@ -2,20 +2,20 @@
 #include "seff.h"
 #include <stdio.h>
 
-long SegsEffectSingleLookup(int v[], size_t v_size, int lookups[], size_t lookups_size) {
+long SeffEffectSingleLookup(int v[], size_t v_size, int lookups[], size_t lookups_size) {
 
     size_t found_count = 0;
     size_t not_found_count = 0;
     const size_t coro_size = 256;
 
     for (size_t i = 0; i < lookups_size; ++i) {
-        seg_args args;
+        search_args args;
         args.first = v;
         args.len = v_size;
         args.key = lookups[i];
 
         seff_coroutine_t *coro =
-            seff_coroutine_new_sized(SegEffectBinarySearch, (void *)&args, coro_size);
+            seff_coroutine_new_sized(SeffEffectBinarySearch, (void *)&args, coro_size);
         bool finished = false;
         int64_t last_read = 0;
         while (!finished) {
@@ -44,8 +44,8 @@ long SegsEffectSingleLookup(int v[], size_t v_size, int lookups[], size_t lookup
     return found_count;
 }
 
-long testSegsEffSingle(int v[], size_t v_size, int lookups[], size_t lookups_size, int streams) {
-    return SegsEffectSingleLookup(v, v_size, lookups, lookups_size);
+long testSeffEffSingle(int v[], size_t v_size, int lookups[], size_t lookups_size, int streams) {
+    return SeffEffectSingleLookup(v, v_size, lookups, lookups_size);
 }
 
 int runner_c(long (*testFn)(int[], size_t, int[], size_t, int), int streams, const char *algo_name);
@@ -58,5 +58,5 @@ int main(int argc, const char **argv) {
     }
 
     // 8 seems to be optimal
-    return runner_c(testSegsEffSingle, streams, "seff");
+    return runner_c(testSeffEffSingle, streams, "seff");
 }

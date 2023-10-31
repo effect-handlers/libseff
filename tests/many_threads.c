@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-void *fn(seff_coroutine_t *self, void *arg) {
-    seff_yield(self, 0, NULL);
+void *fn(void *arg) {
+    seff_yield(seff_current_coroutine(), 0, NULL);
     return NULL;
 }
 

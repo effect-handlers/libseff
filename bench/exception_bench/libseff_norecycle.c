@@ -6,7 +6,7 @@
 
 DEFINE_EFFECT(runtime_error, 10, void, { char *msg; });
 
-void *computation(seff_coroutine_t *self, void *_arg) { THROW(runtime_error, "error"); }
+void *computation(void *_arg) { THROW(runtime_error, "error"); }
 
 int main(void) {
     size_t caught = 0;
