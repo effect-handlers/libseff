@@ -23,13 +23,16 @@ output/native: native.c common.inc | output
 	$(CC) $(CFLAGS) native.c -o $@ $(LDFLAGS)
 
 # We care about the dump to see exactly the generated code
-output/%.dmp: output/% FORCE | output
+output/%.dmp: output/% | output
 	objdump -S --disassemble=bottom $< > $@
 
-output/bench-libseff.json: all FORCE | output
+output/bench-libseff.json: output/libseff_fixed output/libseff_baseline output/libseff_hot_split output/libseff_red_zone | output
 	hyperfine -L "variation" _fixed,_baseline,_hot_split,_red_zone -w5  --export-json $@ -n "libseff" "output/libseff{variation}"
 
-output/bench-native.json: native FORCE | output
+output/bench-native.json: output/native | output
 	hyperfine -L "variation" "" -w5  --export-json $@ -n "native" "output/native{variation}"
+
+output/state.png: output/bench-libseff.json output/bench-native.json | output
+	cd ../.. ; python3 -m bench.hot_split_bench.graph
 
 bench: output/bench-libseff.json output/bench-native.json
