@@ -24,4 +24,4 @@ ax.set_ylim(0, 0.15)
 ax.legend()
 
 # plt.show()
-fig.savefig('bench/hot_split_bench/output/state.png', bbox_inches = "tight")
+fig.savefig('bench/hot_split_bench/output/hot_split.png', bbox_inches = "tight")

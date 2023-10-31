@@ -13,9 +13,10 @@ output/cppcoro: cppcoro.cpp $(CPPCORO_LIB) | output
 
 .PHONY: bench
 
-FORCE:
-
-output/bench-%.json: output/% FORCE | output
+output/bench-%.json: output/% | output
 	hyperfine -L "stack size (bytes)" 0,1000,2000,3000,4000,5000 -w5  --export-json $@ -n "$*" "$< 10000000 0 {stack size (bytes)}"
+
+output/context_switch.png: output/bench-libseff.json output/bench-libco.json output/bench-cppcoro.json | output
+	cd ../.. ; python3 -m bench.context_switch_bench.graph
 
 bench: output/bench-libseff.json output/bench-libco.json output/bench-cppcoro.json
