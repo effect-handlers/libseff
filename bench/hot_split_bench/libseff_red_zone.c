@@ -3,4 +3,4 @@
 #define CORO_SIZE 4096
 #define COROUTINE
 
-#include "libseff_common.inc"
+#include "common.inc"
