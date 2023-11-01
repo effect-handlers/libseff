@@ -1,5 +1,24 @@
 # A collection of benchmarks, tools, scripts, and general banalities
 
+## How to run
+
+Each benchmark that should have both a `bench` and a graph generating rule (the name depends on the
+image name).
+
+Implemented benchmarks so far:
+* context_switch
+* hot_split
+* memory
+* state
+* AD
+* http_server
+
+TODO:
+* Exceptions
+* prefetch
+* skynet
+* Echo server
+
 ## A common format
 
 The format should be something like this per measurement:

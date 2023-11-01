@@ -1,4 +1,4 @@
-all: output/libscheff
+all: output/libscheff output/cohttp_eio output/nethttp_go output/rust_hyper
 
 include ../common.mk
 
@@ -28,17 +28,17 @@ output/rust_hyper: external/retro-httpaf-bench/rust-hyper | output
 
 .PHONY: bench
 
-THREADS	= 8
-CONNECTIONS = 100 1000 5000 10000 50000
-RPS =  800000
+# THREADS	= 8
+# CONNECTIONS = 100 1000 5000 10000 50000
+# RPS =  800000
 
 # THREADS	= 1 8 16 32
 # CONNECTIONS = 1000
 # RPS = 2000000
 
-# THREADS	= 1 8 16 32
-# CONNECTIONS = 100 1000 5000 10000 50000
-# RPS = 35000 50000 100000 200000 400000 800000 1500000 2000000
+THREADS	= 1 8 16 32
+CONNECTIONS = 100 1000 5000 10000 50000
+RPS = 35000 50000 100000 200000 400000 800000 1500000 2000000
 
 FORCE:
 output/bench-%: output/% FORCE $(WRK) | output
@@ -55,12 +55,23 @@ output/bench-%: output/% FORCE $(WRK) | output
 			./$< &  \
 			running_pid=$$!; \
 			sleep 2; \
-			$(WRK) -t 32 -d30s -L -s ${DEPS_DIR}/utils/json.lua -R $$rps -c $$conn http://localhost:8082 > $@-$$conn-$$th-$$rps.txt; \
+			$(WRK) -t 32 -d10s -L -s ${DEPS_DIR}/utils/json.lua -R $$rps -c $$conn http://localhost:8082 > $@-$$conn-$$th-$$rps.txt; \
 			kill $${running_pid}; \
 			sleep 1; \
 		done; \
 	  done; \
 	done;
-	# hyperfine -L "stack size (bytes)" 0,1000,2000,3000,4000,5000 -w5  --export-json $@ -n "$*" "$< 10000000 0 {stack size (bytes)}"
+
+output/http_threads.png: graph.py | output
+	cd ../.. ; python3 -m bench.http_server_bench.graph threads
+
+output/http_connections.png: graph.py | output
+	cd ../.. ; python3 -m bench.http_server_bench.graph connections
+
+output/http_rps.png: graph.py | output
+	cd ../.. ; python3 -m bench.http_server_bench.graph rps
+
+graphs: output/http_threads.png output/http_connections.png output/http_rps.png
+
 
 bench: output/bench-libscheff output/bench-cohttp_eio output/bench-nethttp_go output/bench-rust_hyper
