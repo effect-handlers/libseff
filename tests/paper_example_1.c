@@ -4,7 +4,7 @@
 DEFINE_EFFECT(get, 0, int64_t, {});
 DEFINE_EFFECT(put, 1, void, { int64_t new_value; });
 
-void *counter(seff_coroutine_t *self, void *parameter) {
+void *counter(void *parameter) {
     int64_t counter;
     do {
         counter = PERFORM(get);

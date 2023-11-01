@@ -5,12 +5,12 @@
 
 DEFINE_EFFECT(yield, 0, void, {});
 DEFINE_EFFECT(fork, 1, void, {
-    void *(*thread_fn)(seff_coroutine_t *, void *);
+    void *(*thread_fn)(void *);
     void *thread_arg;
 });
 DEFINE_EFFECT(print, 2, void, { char *msg; });
 
-void *worker(seff_coroutine_t *self, void *param) {
+void *worker(void *param) {
     int64_t id = (int64_t)param;
     for (int64_t iteration = 0; iteration < 10; iteration++) {
         char msg[256];
@@ -21,7 +21,7 @@ void *worker(seff_coroutine_t *self, void *param) {
     return NULL;
 }
 
-void *root(seff_coroutine_t *self, void *param) {
+void *root(void *param) {
     for (int64_t i = 1; i <= 10; i++) {
         PERFORM(fork, worker, (void *)(i));
     }
@@ -78,7 +78,7 @@ void with_output_to_buffer(char *buffer, seff_coroutine_t *handled) {
     }
 }
 
-void *run_threads(seff_coroutine_t *self, void *arg) {
+void *run_threads(void *arg) {
     with_scheduler(seff_coroutine_new(root, (void *)0));
     return 0;
 }

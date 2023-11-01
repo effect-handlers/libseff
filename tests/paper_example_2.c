@@ -4,11 +4,11 @@
 
 DEFINE_EFFECT(yield, 0, void, {});
 DEFINE_EFFECT(fork, 1, void, {
-    void *(*fn)(seff_coroutine_t *, void *);
+    void *(*fn)(void *);
     void *arg;
 });
 
-void *worker(seff_coroutine_t *self, void *param) {
+void *worker(void *param) {
     int64_t id = (int64_t)param;
     for (int64_t iteration = 0; iteration < 10; iteration++) {
         printf("Worker %ld, iteration %ld\n", id, iteration);
@@ -17,7 +17,7 @@ void *worker(seff_coroutine_t *self, void *param) {
     return NULL;
 }
 
-void *root(seff_coroutine_t *self, void *param) {
+void *root(void *param) {
     for (int64_t i = 1; i <= 10; i++) {
         PERFORM(fork, worker, (void *)(i));
     }
