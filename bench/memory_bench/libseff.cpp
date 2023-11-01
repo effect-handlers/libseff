@@ -2,17 +2,18 @@
 
 #include "seff.h"
 
-template <size_t padding> void *deep_coroutine(seff_coroutine_t *self, void *arg) {
+template <size_t padding> void *deep_coroutine(void *arg) {
     char arr[padding];
     int64_t depth = (int64_t)arg;
     if (depth == 0) {
+        seff_coroutine_t *self = seff_current_coroutine();
         volatile bool loop = true;
         while (loop) {
             seff_yield(self, 0, nullptr);
         }
         return arr;
     } else {
-        deep_coroutine<padding>(self, (void *)(depth - 1));
+        deep_coroutine<padding>((void *)(depth - 1));
         return arr;
     }
 }

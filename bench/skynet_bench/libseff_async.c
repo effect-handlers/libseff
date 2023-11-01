@@ -266,7 +266,7 @@ void async_scheduler_run(async_scheduler_t *scheduler) {
 
 // First node id of the last layer
 int64_t last_layer = 1;
-void *skynet(seff_coroutine_t *self, void *_arg) {
+void *skynet(void *_arg) {
     int64_t num = (int64_t)_arg;
 
     if (num >= last_layer) {

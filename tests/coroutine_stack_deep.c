@@ -12,7 +12,7 @@ void *stacky(void *a) {
     return (void *)73330;
 }
 
-void *coroutine_a(seff_coroutine_t *self, void *_nil) {
+void *coroutine_a(void *_nil) {
     void *res;
     int reps = 10000000; // 1000;
 

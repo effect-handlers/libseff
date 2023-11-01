@@ -66,7 +66,7 @@ typedef struct {
 // First node id of the last layer
 int64_t last_layer = 1;
 
-void *skynet(seff_coroutine_t *self, void *_arg) {
+void *skynet(void *_arg) {
     skynet_args_t *args = (skynet_args_t *)_arg;
     skynet_promise_t *promise = &args->promise;
     int64_t num = args->num;

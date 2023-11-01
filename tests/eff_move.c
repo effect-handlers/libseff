@@ -9,7 +9,7 @@
 DEFINE_EFFECT(get_name, 0, char *, {});
 DEFINE_EFFECT(print, 1, void, { char *str; });
 
-void *foo(seff_coroutine_t *self, void *arg) {
+void *foo(void *arg) {
     char str[128] = "Hello from ";
 
     while (1) {
@@ -20,7 +20,7 @@ void *foo(seff_coroutine_t *self, void *arg) {
     }
 }
 
-void *bar(seff_coroutine_t *self, void *_child) {
+void *bar(void *_child) {
     seff_coroutine_t *child = (seff_coroutine_t *)_child;
 
     char *response = NULL;

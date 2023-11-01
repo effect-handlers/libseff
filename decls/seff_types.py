@@ -118,7 +118,4 @@ coroutine = Struct('seff_coroutine_t',
     Field('handled_effects', effect_set.ty)
 )
 
-Typedef('seff_start_fun_t', func([ptr(coroutine.ty), ptr(void)], ptr(void)))
-Typedef('seff_yield_fun_t', func([ptr(coroutine.ty), ptr(void)], ptr(void)))
-
 generate_file(__file__)

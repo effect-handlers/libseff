@@ -12,7 +12,7 @@ void *stacky(void *a) {
     return (void *)73330;
 }
 
-void *coroutine_a(seff_coroutine_t *self, void *_nil) {
+void *coroutine_a(void *_nil) {
     int metaReps = 60000;
     void *res;
     while (metaReps--) {

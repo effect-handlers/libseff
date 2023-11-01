@@ -12,7 +12,7 @@ DEFINE_EFFECT(runtime_error, 10, void, { char *msg; });
 
 seff_coroutine_t children[MAX_DEPTH];
 
-void *computation(seff_coroutine_t *self, void *_arg) {
+void *computation(void *_arg) {
     int64_t depth = (int64_t)_arg;
     if (depth == 0) {
         THROW(runtime_error, "error");

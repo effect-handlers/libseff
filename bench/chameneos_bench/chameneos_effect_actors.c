@@ -21,7 +21,7 @@ typedef struct {
     broker_message_options payload;
 } broker_message_t;
 
-void *chameneos_wrapper(seff_coroutine_t *k, struct actor_t *self) {
+void *chameneos_wrapper(struct actor_t *self) {
     // receive initial info
 
     chameneos_init_t *info = actor_recv(self);
@@ -82,7 +82,7 @@ typedef struct {
     size_t meetings;
 } broker_init_t;
 
-void *broker_fn(seff_coroutine_t *k, struct actor_t *self) {
+void *broker_fn(struct actor_t *self) {
     broker_init_t *init = actor_recv(self);
 
     int meetings = init->meetings;
@@ -148,7 +148,7 @@ void *broker_fn(seff_coroutine_t *k, struct actor_t *self) {
     return NULL;
 }
 
-void *actors_main(seff_coroutine_t *self, void *arg) {
+void *actors_main(void *arg) {
     actor_t *broker = fork_actor(broker_fn);
     actor_insert_msg(broker, arg);
 

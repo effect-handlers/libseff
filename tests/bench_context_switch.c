@@ -13,7 +13,7 @@ DEFINE_EFFECT(put, 1, void, { int64_t value; });
 int64_t get(void) { return PERFORM(get); }
 void put(int64_t arg) { PERFORM(put, arg); }
 
-void *coroutine(seff_coroutine_t *self, void *arg) {
+void *coroutine(void *arg) {
     while (true) {
         put(get() + 1);
     }

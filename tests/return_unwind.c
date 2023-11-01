@@ -11,7 +11,7 @@ int64_t stacky(int a) {
     return 54321;
 }
 
-void *fn(seff_coroutine_t *self, void *_arg) {
+void *fn(void *_arg) {
     int64_t arg = (int64_t)_arg;
 
     return (void *)stacky(arg);
