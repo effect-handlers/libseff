@@ -46,4 +46,6 @@ queue_elt_t tl_queue_pop(tl_queue_t *queue);
 // Can be call by anyone
 queue_elt_t tl_queue_steal(tl_queue_t *queue);
 
+bool tl_queue_empty(tl_queue_t *queue);
+
 #endif

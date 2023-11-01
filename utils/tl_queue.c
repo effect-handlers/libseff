@@ -98,3 +98,10 @@ queue_elt_t tl_queue_steal(tl_queue_t *self) {
     RELEASE_LOCK(&self->locked);
     return elt;
 }
+
+bool tl_queue_empty(tl_queue_t *self) {
+    ACQUIRE_LOCK(&self->locked);
+    bool empty = self->head == self->tail;
+    RELEASE_LOCK(&self->locked);
+    return empty;
+}
