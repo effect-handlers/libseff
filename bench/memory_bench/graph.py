@@ -20,4 +20,4 @@ grapher(res, ax)
 ax.set_ylabel("memory consumed (bytes)")
 
 # plt.show()
-fig.savefig('bench/memory_bench/output/hot_split.png', bbox_inches = "tight")
+fig.savefig('bench/memory_bench/output/memory.png', bbox_inches = "tight")

@@ -52,7 +52,7 @@ LDFLAGS           := -fuse-ld=$(LD) -L./$(OUTPUT_DIR) ${LDFLAGS.${STACK_POLICY}}
 
 .PHONY: all test bench clean
 
-all: $(OUTPUT_DIR)/lib/libseff.a test bench
+all: $(OUTPUT_DIR)/lib/libseff.a test
 
 GENERATE_PY := $(PY) decls/seff_types.py \
 	--arch ${ARCH}                       \

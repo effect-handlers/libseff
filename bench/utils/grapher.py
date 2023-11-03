@@ -63,8 +63,18 @@ def grapher(results, ax=plt, parameter_name = None):
 
     for (label, g) in groups.items():
 
-        zipped = [(r['parameters'][parameter_name], float(r['measurement'])) for r in g]
-        zipped = sorted(zipped, key=lambda x: float(x[0]))
+        zipped = []
+        for r in g:
+            m = float(r['measurement'])
+            x = r['parameters'][parameter_name]
+            try:
+                x = float(x)
+            except ValueError:
+                pass
+
+            zipped.append((x, m))
+
+        zipped = sorted(zipped, key=lambda x: x[0])
         unzipped = list(zip(*zipped))
         style = getStyle(label)
         ax.plot(unzipped[0], unzipped[1], label=label, **style)

@@ -17,7 +17,6 @@ TODO:
 * Exceptions
 * prefetch
 * skynet
-* Echo server
 
 ## A common format
 

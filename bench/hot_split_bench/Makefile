@@ -32,7 +32,7 @@ output/bench-libseff.json: output/libseff_fixed output/libseff_baseline output/l
 output/bench-native.json: output/native | output
 	hyperfine -L "variation" "" -w5  --export-json $@ -n "native" "output/native{variation}"
 
-output/hot_split.png: output/bench-libseff.json output/bench-native.json | output
+output/hot_split.png: output/bench-libseff.json output/bench-native.json graph.py | output
 	cd ../.. ; python3 -m bench.hot_split_bench.graph
 
 bench: output/bench-libseff.json output/bench-native.json
