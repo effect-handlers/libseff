@@ -167,7 +167,7 @@ __attribute__((optnone, noinline)) int int_printf(const char *fmt, uint64_t str)
         }                                                   \
     } while (0);
 
-void *tests(seff_coroutine_t *self, void *arg) {
+void *tests(void *arg) {
     RUN_TEST(test_large_frame_alloc)
     RUN_TEST(test_very_large_frame_alloc)
     RUN_TEST(test_non_split)

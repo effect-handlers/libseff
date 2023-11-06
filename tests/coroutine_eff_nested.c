@@ -37,7 +37,7 @@ void bounce(const char *name) {
     PERFORM(print, response);
 }
 
-void *nested(seff_coroutine_t *read_handler, void *args) {
+void *nested(void *args) {
     while (1) {
         bounce("nested");
     }
@@ -45,8 +45,9 @@ void *nested(seff_coroutine_t *read_handler, void *args) {
     return NULL;
 }
 
-void *parent(seff_coroutine_t *toplevel_handler, void *args) {
-    seff_coroutine_t *child = seff_coroutine_new(nested, toplevel_handler);
+void *parent(void *args) {
+    seff_coroutine_t *toplevel = seff_current_coroutine();
+    seff_coroutine_t *child = seff_coroutine_new(nested, toplevel);
     seff_handle(child, NULL, HANDLES(read));
 
     for (size_t i = 0; i < 3; i++) {

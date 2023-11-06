@@ -4,8 +4,8 @@
 // In a templated world, this could be templated
 DEFINE_EFFECT(deref, 5, int64_t, { int const *addr; });
 
-void *SegEffectBinarySearch(seff_coroutine_t *self, void *_arg) {
-    seg_args *arg = (seg_args *)_arg;
+void *SeffEffectBinarySearch(void *_arg) {
+    search_args *arg = (search_args *)_arg;
     int const *first = arg->first;
     size_t len = arg->len;
     int val = arg->key;

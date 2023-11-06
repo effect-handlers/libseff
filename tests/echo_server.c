@@ -25,7 +25,7 @@
 #endif
 bool reverse = false;
 _Atomic int n_connections = 1;
-void *connection_fun(seff_coroutine_t *self, void *_arg) {
+void *connection_fun(void *_arg) {
 #ifndef NDEBUG
     int connection_id = atomic_fetch_add(&n_connections, 1);
 #endif
@@ -62,7 +62,7 @@ void *connection_fun(seff_coroutine_t *self, void *_arg) {
     return NULL;
 }
 
-void *listener_fun(seff_coroutine_t *self, void *_arg) {
+void *listener_fun(void *_arg) {
     int socket_fd = (int)(uintptr_t)_arg;
 #ifndef NDEBUG
     printf("Listening for connections\n");

@@ -6,7 +6,7 @@ typedef struct {
     int64_t number;
 } pong_msg;
 
-void *pong_fn(seff_coroutine_t *k, actor_t *self) {
+void *pong_fn(actor_t *self) {
     puts("[pong] initialized");
 
     while (true) {
@@ -25,7 +25,7 @@ void *pong_fn(seff_coroutine_t *k, actor_t *self) {
     return NULL;
 }
 
-void *ping_fn(seff_coroutine_t *k, actor_t *self) {
+void *ping_fn(actor_t *self) {
     puts("[ping] initialized");
     puts("[ping] awaiting pong address");
 
@@ -46,7 +46,7 @@ void *ping_fn(seff_coroutine_t *k, actor_t *self) {
     return NULL;
 }
 
-void *actors_main(seff_coroutine_t *self, void *arg) {
+void *actors_main(void *arg) {
     puts("Hello from actors_main");
 
     actor_t *ping = fork_actor(ping_fn);

@@ -4,19 +4,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-int64_t stacky(seff_coroutine_t *k, int64_t a) {
+int64_t stacky(int64_t a) {
     if (a) {
-        return stacky(k, a - 1);
+        return stacky(a - 1);
     }
     //PERFORM_DIRECT(k, return, (void *)54321);
-    seff_exit(k, EFF_ID(return), (void*)54321);
+    seff_exit(seff_current_coroutine(), EFF_ID(return), (void*)54321);
     return 1;
 }
 
-void *fn(seff_coroutine_t *self, void *_arg) {
+void *fn(void *_arg) {
     int64_t arg = (int64_t)_arg;
 
-    return (void *)stacky(self, arg);
+    return (void *)stacky(arg);
 }
 
 #define REPS 1

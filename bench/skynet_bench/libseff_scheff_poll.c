@@ -35,7 +35,7 @@ typedef struct {
 // First node id of the last layer
 int64_t last_layer = 1;
 
-void *skynet(seff_coroutine_t *self, void *_arg) {
+void *skynet(void *_arg) {
     int64_t num = ((skynet_args_t *)_arg)->num;
     lwp_t *result_promise = &((skynet_args_t *)_arg)->result_promise;
 

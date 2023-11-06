@@ -7,7 +7,7 @@ void heavy_hello(void) {
     puts("Hello world! I am a coroutine!");
 }
 
-void *coroutine(seff_coroutine_t *k, void *arg) {
+void *coroutine(void *arg) {
     heavy_hello();
     return NULL;
 }

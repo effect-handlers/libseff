@@ -25,7 +25,7 @@
 
 #define DEFAULT_MAILBOX_CAPACITY 128
 struct actor_t;
-typedef void *(actor_fn_t)(seff_coroutine_t *k, struct actor_t *self);
+typedef void *(actor_fn_t)(struct actor_t *self);
 typedef struct actor_t {
     void **mailbox;
     _Atomic int64_t start;

@@ -3,7 +3,8 @@
 
 size_t context_switches = 0;
 
-void *worker(seff_coroutine_t *self, void *_worker_id) {
+void *worker(void *_worker_id) {
+    seff_coroutine_t *self = seff_current_coroutine();
     int64_t worker_id = (int64_t)_worker_id;
 
     int64_t result = 0;

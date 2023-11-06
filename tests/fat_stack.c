@@ -9,8 +9,8 @@ char fat_stack(void) {
     return padding[9999];
 }
 
-void *fn(seff_coroutine_t *self, void *arg) {
-    seff_yield(self, 0, NULL);
+void *fn(void *arg) {
+    seff_yield(seff_current_coroutine(), 0, NULL);
     fat_stack();
     return NULL;
 }
