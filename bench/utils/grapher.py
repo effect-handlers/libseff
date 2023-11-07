@@ -91,7 +91,7 @@ def grapher_paramless(results, ax=plt):
     for (l, p, m, s) in zipped:
         # unzipped = list(zip(*zipped))
         style = getStyle(l)
-        ax.errorbar([f"{l}[{p}]"], [m], [s], fmt='o', label=l if l not in labels else None, linewidth=2, capsize=6, **style)
+        ax.errorbar([f"{l}[{p.replace('_', ' ').strip()}]"], [m], [s], fmt='o', label=l if l not in labels else None, linewidth=2, capsize=6, **style)
         labels[l] = 1
 
     ax.set_xlabel("Benchmarks")

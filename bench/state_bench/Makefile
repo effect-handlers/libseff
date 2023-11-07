@@ -109,7 +109,10 @@ output/bench-libco.json: $(all_libco) | output
 	hyperfine -L "variation" "" -w5  --export-json $@ -n "libco" "output/libco{variation}"
 
 
-output/state.png: output/bench-libseff.json output/bench-native.json output/bench-cpp-effects.json output/bench-libhandler.json output/bench-libmpeff.json output/bench-libmprompt.json output/bench-cppcoro.json output/bench-libco.json | output
+output/state.png: graph.py output/bench-libseff.json output/bench-native.json output/bench-cpp-effects.json output/bench-libhandler.json output/bench-libmpeff.json output/bench-libmprompt.json output/bench-cppcoro.json output/bench-libco.json | output
 	cd ../.. ; python3 -m bench.state_bench.graph
 
-bench: output/bench-libseff.json output/bench-native.json output/bench-cpp-effects.json output/bench-libhandler.json output/bench-libmpeff.json output/bench-libmprompt.json output/bench-cppcoro.json
+output/state.tex: graph.py output/bench-libseff.json output/bench-native.json output/bench-cpp-effects.json output/bench-libhandler.json output/bench-libmpeff.json output/bench-libmprompt.json output/bench-cppcoro.json output/bench-libco.json | output
+	cd ../.. ; python3 -m bench.state_bench.graph
+
+bench: output/bench-libseff.json output/bench-native.json output/bench-cpp-effects.json output/bench-libhandler.json output/bench-libmpeff.json output/bench-libmprompt.json output/bench-cppcoro.json output/bench-libco.json
