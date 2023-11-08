@@ -26,7 +26,7 @@ output/cpp-effects: cpp-effects.cpp | output
 	$(CXX) $(CXXFLAGS_CPP-EFFECTS) cpp-effects.cpp -o $@ $(LDFLAGS_CPP-EFFECTS)
 
 output/cpp-effects_plain: cpp-effects_plain.cpp | output
-	$(CXX) $(CXXFLAGS_CPP-EFFECTS) cpp-effects.cpp -o $@ $(LDFLAGS_CPP-EFFECTS)
+	$(CXX) $(CXXFLAGS_CPP-EFFECTS) cpp-effects_plain.cpp -o $@ $(LDFLAGS_CPP-EFFECTS)
 
 # LH_OP_TAIL_NOOP
 output/libhandler_tail_noop: libhandler.c $(LIBHANDLER_LIB) | output
