@@ -79,6 +79,11 @@ bottom.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
 # plt.show()
 fig.savefig('bench/state_bench/output/state.png', bbox_inches = "tight")
 
+for r in res:
+    # So it matches the commands from our paper
+    if r['label'] == 'cpp-effects':
+        r['label'] = 'cppeffects'
+    r['label'] = "\\" + r['label']
 
 with open("bench/state_bench/output/state.tex", "w") as f:
-    f.write(format_table(res))
+    f.write(format_table(res, base='\\libseff', baseVariation=''))
