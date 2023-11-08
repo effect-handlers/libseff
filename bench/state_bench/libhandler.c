@@ -16,8 +16,6 @@ lh_value stateful(lh_value arg) {
     return lh_value_null;
 }
 
-lh_value _state_result(lh_value local, lh_value arg) { return arg; }
-
 long value;
 
 lh_value _state_get(lh_resume rc, lh_value local, lh_value arg) {
@@ -31,7 +29,7 @@ lh_value _state_put(lh_resume rc, lh_value local, lh_value arg) {
 
 const lh_operation _state_ops[] = {{HANDLER_KIND, LH_OPTAG(state, get), &_state_get},
     {HANDLER_KIND, LH_OPTAG(state, put), &_state_put}, {LH_OP_NULL, lh_op_null, NULL}};
-const lh_handlerdef state_def = {LH_EFFECT(state), NULL, NULL, &_state_result, _state_ops};
+const lh_handlerdef state_def = {LH_EFFECT(state), NULL, NULL, NULL, _state_ops};
 
 lh_value state_handle(lh_value (*action)(lh_value), int state0, lh_value arg) {
     return lh_handle(&state_def, lh_value_int(state0), action, arg);
