@@ -9,10 +9,8 @@ from ..utils.grapher import grapher, grapher_paramless, getStyle
 res = []
 
 files = [
-'./bench/ad_bench/output/bench-naive.json',
-'./bench/ad_bench/output/bench-no_alloc.json',
-'./bench/ad_bench/output/bench-indirect_prop_t.json',
-'./bench/ad_bench/output/bench-ptr_dbl_cast.json',
+'./bench/ad_bench/output/bench-libseff.json',
+'./bench/ad_bench/output/bench-ocaml.json',
 ]
 
 for x in files:
