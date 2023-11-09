@@ -20,7 +20,7 @@ for x in files:
 fig = plt.figure()
 ax = fig.add_subplot(111)
 grapher_paramless(res, ax)
-ax.set_ylim(0, 0.15)
+ax.set_ylim(0, 0.5)
 ax.legend()
 
 # plt.show()
