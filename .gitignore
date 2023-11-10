@@ -59,6 +59,7 @@ asm/seff_types.S
 output
 output-segmented
 output-fixed
+output-imgs
 
 # Python cache
 __pycache__
@@ -74,3 +75,6 @@ __pycache__
 
 # Python venvs
 .venvs/
+
+# We don't want to publish ocaml code
+bench/ad_bench/ocaml

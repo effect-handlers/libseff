@@ -11,11 +11,11 @@ res = []
 
 files = [
     './bench/prefetching_lookups_bench/output/bench-naive.json',
-    './bench/prefetching_lookups_bench/output/bench-sm.json',
+    # './bench/prefetching_lookups_bench/output/bench-sm.json',
     './bench/prefetching_lookups_bench/output/bench-coro.json',
-    './bench/prefetching_lookups_bench/output/bench-libseff.json',
+    # './bench/prefetching_lookups_bench/output/bench-libseff.json',
     './bench/prefetching_lookups_bench/output/bench-libseff_effect_coro.json',
-    './bench/prefetching_lookups_bench/output/bench-libseff_effect_naive.json',
+    # './bench/prefetching_lookups_bench/output/bench-libseff_effect_naive.json',
 ]
 
 for x in files:

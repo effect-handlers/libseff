@@ -143,7 +143,9 @@ $(OUTPUT_DIR)/include: | $(OUTPUT_DIR)
 	mkdir $@
 
 clean:
-	rm -rf $(OUTPUT_DIR)
+	rm -rf output-fixed
+	rm -rf output-segmented
+	rm -rf output-imgs
 	for bench_dir in bench/*_bench/ ; do \
 		$(MAKE) -C $${bench_dir} clean ; \
 	done
@@ -153,3 +155,24 @@ $(OUTPUT_DIR)/lib/libseff.a: $(OUTPUT_DIR)/seff_mem.o $(OUTPUT_DIR)/seff_mem_asm
 
 $(OUTPUT_DIR)/lib/libutils.a: $(OUTPUT_DIR)/actors.o $(OUTPUT_DIR)/cl_queue.o $(OUTPUT_DIR)/tk_queue.o $(OUTPUT_DIR)/tl_queue.o $(OUTPUT_DIR)/scheff.o $(OUTPUT_DIR)/net.o $(OUTPUT_DIR)/http_response.o  | $(OUTPUT_DIR)/lib
 	ar -rcs $@ $^
+
+output-imgs:
+	mkdir $@
+
+all_imgs: output-imgs/state_good.png output-imgs/state_bad.png output-imgs/hot_split.png output-imgs/ad.png output-imgs/prefetch_best.png output-imgs/prefetch_all.png
+
+output-imgs/state_%.png: all | output-imgs
+	$(MAKE) BUILD=${BUILD} -C bench/state_paper_bench output/state_$*.png
+	cp bench/state_paper_bench/output/state_$*.png $@
+
+output-imgs/hot_split.png: all | output-imgs
+	$(MAKE) BUILD=${BUILD} -C bench/hot_split_bench output/hot_split.png
+	cp bench/hot_split_bench/output/hot_split.png $@
+
+output-imgs/ad.png: all | output-imgs
+	$(MAKE) BUILD=${BUILD} -C bench/ad_bench output/ad.png
+	cp bench/ad_bench/output/ad.png $@
+
+output-imgs/prefetch_%.png: all | output-imgs
+	$(MAKE) BUILD=${BUILD} -C bench/prefetching_lookups_bench output/prefetch_$*.png
+	cp bench/prefetching_lookups_bench/output/prefetch_$*.png $@

@@ -5,7 +5,7 @@ from ..utils.hyperfine_parser import parse_hyperfine
 from ..utils.valgrind_parser import parse_valgrind
 from ..utils.wrk2_parser import parse_wrk2
 from ..utils.grapher import grapher, grapher_paramless, getStyle
-from ..utils.latex_printer import format_table
+from ..utils.latex_printer import format_dict
 
 
 res = []
@@ -57,7 +57,7 @@ bad_ones = [
 fig = plt.figure()
 ax = fig.add_subplot(111)
 
-grapher(list(filter(lambda x: x['label'] in good_ones, res)), ax, parameter_name='depth')
+grapher(list(filter(lambda x: f"{x['label']}{x['parameters']['variation']}" in good_ones, res)), ax, parameter_name='depth')
 
 # plt.show()
 fig.savefig('bench/state_paper_bench/output/state_good.png', bbox_inches = "tight")
@@ -66,7 +66,7 @@ fig.savefig('bench/state_paper_bench/output/state_good.png', bbox_inches = "tigh
 fig = plt.figure()
 ax = fig.add_subplot(111)
 
-grapher(list(filter(lambda x: x['label'] in bad_ones, res)), ax, parameter_name='depth')
+grapher(list(filter(lambda x: f"{x['label']}{x['parameters']['variation']}" in bad_ones, res)), ax, parameter_name='depth')
 
 # plt.show()
 fig.savefig('bench/state_paper_bench/output/state_bad.png', bbox_inches = "tight")
@@ -76,11 +76,24 @@ for x in files:
     with open(x) as f:
         res += parse_hyperfine(f)
 
+table = []
+
+baseValue = None
 for r in res:
-    # So it matches the commands from our paper
-    if r['label'] == 'cpp-effects':
-        r['label'] = 'cppeffects'
-    r['label'] = "\\" + r['label']
+    if r['label'] == 'libseff' and r['parameters']['variation'] == '_direct' and r['parameters']['depth'] == '0':
+        baseValue = float(r['measurement'])
+
+for r in res:
+    d = {}
+    d['Framework'] = r['label']
+    d['Depth'] = r['parameters']['depth']
+    m = float(r['measurement'])
+    s = float(r['stddev'])
+    d['Mean [ms]'] = f"{(m * 1000):.2f} ± {(s * 1000):.2f}"
+    d['Relative'] = f"{(m / baseValue):.2f}"
+    table.append(d)
+
+table = sorted(table, key = lambda x: float(x['Relative']))
 
 with open("bench/state_paper_bench/output/state.tex", "w") as f:
-    f.write(format_table(res, baseValue=None))
+    f.write(format_dict(table))

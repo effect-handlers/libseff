@@ -69,7 +69,7 @@ FORCE:
 
 HYPERFINE = hyperfine
 HYP_ARGS = -w1 -r2
-HYP_PARAMS = -L "depth" 0,10,50,100
+HYP_PARAMS = -L "depth" 0,10,20,40,60,80,100
 
 output/bench-libseff.json: $(all_libseff) | output
 	$(HYPERFINE) $(HYP_ARGS) $(HYP_PARAMS) -L "variation" ,_direct --export-json $@ -n "libseff" "output/libseff{variation} 10000000 {depth}"
@@ -88,7 +88,8 @@ output/bench-libmpeff.json: $(all_libmpeff) | output
 	$(HYPERFINE) $(HYP_ARGS) $(HYP_PARAMS) -L "variation" _tail_noop,_once --export-json $@ -n "libmpeff" "output/libmpeff{variation} 10000000 {depth}"
 
 
-bench: output/bench-libseff.json output/bench-native.json output/bench-cpp-effects.json output/bench-libhandler.json output/bench-libmpeff.json output/bench-libmprompt.json output/bench-cppcoro.json output/bench-libco.json
+output/state_good.png: graph.py output/bench-libseff.json output/bench-native.json output/bench-cpp-effects.json output/bench-libhandler.json output/bench-libmpeff.json | output
+	cd ../.. ; python3 -m bench.state_paper_bench.graph
 
-output/state.png: graph.py output/bench-libseff.json output/bench-native.json output/bench-cpp-effects.json output/bench-libhandler.json output/bench-libmpeff.json | output
+output/state_bad.png: graph.py output/bench-libseff.json output/bench-native.json output/bench-cpp-effects.json output/bench-libhandler.json output/bench-libmpeff.json | output
 	cd ../.. ; python3 -m bench.state_paper_bench.graph

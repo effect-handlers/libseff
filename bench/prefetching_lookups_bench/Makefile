@@ -26,14 +26,15 @@ output/libseff_effect_naive: libseff_effect_naive.c libseff_effect_common.h outp
 	$(CC) $(CFLAGS_LIBSEFF_SEGMENTED) -o output/libseff_effect_naive.o -c libseff_effect_naive.c
 	$(CXX) $(CXXFLAGS) -stdlib=libc++ -o $@ output/libseff_effect_naive.o output/runner_c.o $(LDFLAGS_LIBSEFF_SEGMENTED)
 
+HYP_ARGS = -w1 -r2
 
 output/bench-%.json: output/% | output
-	hyperfine -r10 -P streams 1 20 -w1  --export-json $@ -n "$*" "$< {streams}"
+	hyperfine $(HYP_ARGS) -P streams 1 20  --export-json $@ -n "$*" "$< {streams}"
 
-output/prefetch_all.png: output/bench-naive.json output/bench-sm.json output/bench-coro.json output/bench-libseff.json output/bench-libseff_effect_coro.json output/bench-libseff_effect_naive.json graph.py | output
+output/prefetch_all.png: bench graph.py | output
 	cd ../.. ; python3 -m bench.prefetching_lookups_bench.graph
 
-output/prefetch_best.png: output/bench-naive.json output/bench-sm.json output/bench-coro.json output/bench-libseff.json output/bench-libseff_effect_coro.json output/bench-libseff_effect_naive.json graph.py | output
+output/prefetch_best.png: bench graph.py | output
 	cd ../.. ; python3 -m bench.prefetching_lookups_bench.graph
 
-bench: output/bench-naive.json output/bench-sm.json output/bench-coro.json output/bench-libseff.json output/bench-libseff_effect_coro.json output/bench-libseff_effect_naive.json
+bench: output/bench-naive.json output/bench-coro.json output/bench-libseff_effect_coro.json
