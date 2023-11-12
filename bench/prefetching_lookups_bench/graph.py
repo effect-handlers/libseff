@@ -28,7 +28,7 @@ ax = fig.add_subplot(111)
 grapher(res, ax)
 
 # plt.show()
-fig.savefig('bench/prefetching_lookups_bench/output/prefetch_all.png', bbox_inches = "tight")
+# fig.savefig('bench/prefetching_lookups_bench/output/prefetch_all.png', bbox_inches = "tight")
 
 # Let's take only the best ones now
 
@@ -46,10 +46,12 @@ for r in res:
 resBest = map(lambda x: x[1], best.values())
 resBest = list(sorted(resBest, key=lambda x: float(x['parameters']['streams'])))
 
-fig = plt.figure()
-ax = fig.add_subplot(111)
+# fig = plt.figure()
+# ax = fig.add_subplot(111)
 
-grapher(resBest, ax)
+grapher(resBest, ax, extraStyle={'markersize': 12, 'alpha': 1.0})
+
+fig.savefig('bench/prefetching_lookups_bench/output/prefetch.png', bbox_inches = "tight")
 
 # plt.show()
-fig.savefig('bench/prefetching_lookups_bench/output/prefetch_best.png', bbox_inches = "tight")
+# fig.savefig('bench/prefetching_lookups_bench/output/prefetch_best.png', bbox_inches = "tight")

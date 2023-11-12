@@ -1,49 +1,47 @@
 from os import listdir
 from os.path import isfile, join
-import argparse
+from glob import glob
 import matplotlib.pyplot as plt
 from ..utils.hyperfine_parser import parse_hyperfine
 from ..utils.valgrind_parser import parse_valgrind
 from ..utils.wrk2_parser import parse_wrk2
+from ..utils.memory_parser import parse_memory
 from ..utils.grapher import grapher, grapher_paramless, getStyle
 
-def graph_http_server(labels, conns, threads, rps, parameter_name, file_name):
-    res = []
-
-    for l in labels:
-        for c in conns:
-            for t in threads:
-                for r in rps:
-                    name = f'./bench/http_server_bench/output/bench-{l}-{c}-{t}-{r}.txt'
-                    with open(name) as f:
-                        res += parse_wrk2(f)
-
+def graph_http(results, moving_param, filter_params, image_name):
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    grapher(res, ax, parameter_name=parameter_name)
+    filtered_res = []
+    for r in results:
+        done = True
+        for (k, v) in filter_params.items():
+            if (r['parameters'][k] != v):
+                done = False
+                break
+        if done:
+            filtered_res.append(r)
 
-    fig.savefig(f'bench/http_server_bench/output/{file_name}.png', bbox_inches = "tight")
+    grapher(filtered_res, ax, parameter_name=moving_param)
+
+    fig.savefig(f'bench/http_server_bench/output/{image_name}.png', bbox_inches = "tight")
+
+reqs = []
+for g in glob('./bench/http_server_bench/output/bench-*.txt'):
+    with open(g) as f:
+        reqs += parse_wrk2(f)
+
+graph_http(reqs, 'Number of threads', {'Connections': '1000', 'Requests per second': '800000'}, 'http_threads')
+graph_http(reqs, 'Connections', {'Number of threads': '8', 'Requests per second': '100000'}, 'http_conn')
+graph_http(reqs, 'Requests per second', {'Connections': '1000', 'Number of threads': '1'}, 'http_rps_1')
+graph_http(reqs, 'Requests per second', {'Connections': '1000', 'Number of threads': '8'}, 'http_rps_8')
+graph_http(reqs, 'Requests per second', {'Connections': '1000', 'Number of threads': '16'}, 'http_rps_16')
+graph_http(reqs, 'Requests per second', {'Connections': '1000', 'Number of threads': '32'}, 'http_rps_32')
 
 
+mem = []
+for g in glob('./bench/http_server_bench/output/bench-*.memory'):
+    with open(g) as f:
+        mem += parse_memory(f)
 
-labels = ['libscheff', 'cohttp_eio', 'nethttp_go', 'rust_hyper']
-
-# THREADS	= 1 8 16 32
-# CONNECTIONS = 100 1000 5000 10000 50000
-# RPS = 35000 50000 100000 200000 400000 800000 1500000 2000000
-
-parser = argparse.ArgumentParser(
-                    prog='graph',
-                    description='Graph results from HTTP server benchmark')
-
-parser.add_argument('variable', choices=['threads', 'connections', 'rps'])           # positional argument
-
-args = parser.parse_args()
-
-if args.variable == "threads":
-    graph_http_server(labels, [1000], [1, 8, 16, 32], [2000000], 'Number of threads', 'http_threads')
-elif args.variable == "connections":
-    graph_http_server(labels, [100, 1000, 5000, 10000, 50000], [8], [2000000], 'Connections', 'http_connections')
-if args.variable == "rps":
-    graph_http_server(labels, [1000], [8], [35000, 50000, 100000, 200000, 400000, 800000, 1500000, 2000000], 'Requests per second', 'http_rps')
+graph_http(mem, 'Number of threads', {'Connections': '1000', 'Requests per second': '100000'}, 'http_memory')

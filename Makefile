@@ -159,7 +159,9 @@ $(OUTPUT_DIR)/lib/libutils.a: $(OUTPUT_DIR)/actors.o $(OUTPUT_DIR)/cl_queue.o $(
 output-imgs:
 	mkdir $@
 
-all_imgs: output-imgs/state_good.png output-imgs/state_bad.png output-imgs/hot_split.png output-imgs/ad.png output-imgs/prefetch_best.png output-imgs/prefetch_all.png
+all_http_imgs: output-imgs/http_threads.png output-imgs/http_conn.png output-imgs/http_rps_1.png output-imgs/http_rps_8.png output-imgs/http_rps_16.png output-imgs/http_rps_32.png output-imgs/http_memory.png
+
+all_imgs: output-imgs/state_good.png output-imgs/state_bad.png output-imgs/hot_split.png output-imgs/ad.png output-imgs/prefetch.png all_http_imgs
 
 output-imgs/state_%.png: all | output-imgs
 	$(MAKE) BUILD=${BUILD} -C bench/state_paper_bench output/state_$*.png
@@ -173,6 +175,10 @@ output-imgs/ad.png: all | output-imgs
 	$(MAKE) BUILD=${BUILD} -C bench/ad_bench output/ad.png
 	cp bench/ad_bench/output/ad.png $@
 
-output-imgs/prefetch_%.png: all | output-imgs
-	$(MAKE) BUILD=${BUILD} -C bench/prefetching_lookups_bench output/prefetch_$*.png
-	cp bench/prefetching_lookups_bench/output/prefetch_$*.png $@
+output-imgs/prefetch.png: all | output-imgs
+	$(MAKE) BUILD=${BUILD} -C bench/prefetching_lookups_bench output/prefetch.png
+	cp bench/prefetching_lookups_bench/output/prefetch.png $@
+
+output-imgs/http_%.png: all | output-imgs
+	$(MAKE) BUILD=${BUILD} -C bench/http_server_bench output/http_$*.png
+	cp bench/http_server_bench/output/http_$*.png $@

@@ -53,7 +53,7 @@ def getStyle(label):
     return styles[label]
 
 
-def grapher(results, ax=plt, parameter_name = None):
+def grapher(results, ax=plt, parameter_name = None, extraStyle={}):
 
     if not parameter_name:
         parameter_name = getParamName(results)
@@ -61,7 +61,9 @@ def grapher(results, ax=plt, parameter_name = None):
     groups = groupByLabel(results)
 
 
-    for (label, g) in groups.items():
+    h, l = ax.get_legend_handles_labels()
+    labels = set(l)
+    for (l, g) in groups.items():
 
         zipped = []
         for r in g:
@@ -76,8 +78,9 @@ def grapher(results, ax=plt, parameter_name = None):
 
         zipped = sorted(zipped, key=lambda x: x[0])
         unzipped = list(zip(*zipped))
-        style = getStyle(label)
-        ax.plot(unzipped[0], unzipped[1], label=label, **style)
+        style = getStyle(l)
+        ax.plot(unzipped[0], unzipped[1], label=l if l not in labels else None, **{**style, **extraStyle})
+        labels.add(l)
 
     ax.legend()
     ax.set_xlabel(parameter_name)

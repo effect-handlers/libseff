@@ -29,12 +29,9 @@ output/libseff_effect_naive: libseff_effect_naive.c libseff_effect_common.h outp
 HYP_ARGS = -w1 -r2
 
 output/bench-%.json: output/% | output
-	hyperfine $(HYP_ARGS) -P streams 1 20  --export-json $@ -n "$*" "$< {streams}"
+	hyperfine $(HYP_ARGS) -P streams 1 20  --export-json $@ -n 	"$*" "$< {streams}"
 
-output/prefetch_all.png: bench graph.py | output
-	cd ../.. ; python3 -m bench.prefetching_lookups_bench.graph
-
-output/prefetch_best.png: bench graph.py | output
+output/prefetch.png: bench graph.py | output
 	cd ../.. ; python3 -m bench.prefetching_lookups_bench.graph
 
 bench: output/bench-naive.json output/bench-coro.json output/bench-libseff_effect_coro.json
