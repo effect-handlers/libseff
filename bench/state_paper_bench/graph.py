@@ -22,12 +22,6 @@ for x in files:
     with open(x) as f:
         res += parse_hyperfine(f)
 
-# for r in res:
-#     r['style'] = r['label']
-#     r['label'] = f"{r['label']}{r['parameters']['variation']}"
-
-
-
 good_ones = [
     'libseff_direct',
     'cpp-effects_optimal',
@@ -45,21 +39,16 @@ bad_ones = [
 ]
 
 
-# fig = plt.figure()
-# ax = fig.add_subplot(111)
-
-# grapher(res, ax, parameter_name='depth')
-
-# # plt.show()
-# fig.savefig('bench/state_paper_bench/output/state.png', bbox_inches = "tight")
-
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
 
 grapher(list(filter(lambda x: f"{x['label']}{x['parameters']['variation']}" in good_ones, res)), ax, parameter_name='depth')
 
-# plt.show()
+ax.set_xlabel('Depth')
+ax.set_ylabel('Time (seconds)')
+# ax.set_ylim(top=15)
+
 fig.savefig('bench/state_paper_bench/output/state_good.png', bbox_inches = "tight")
 
 
@@ -68,32 +57,63 @@ ax = fig.add_subplot(111)
 
 grapher(list(filter(lambda x: f"{x['label']}{x['parameters']['variation']}" in bad_ones, res)), ax, parameter_name='depth')
 
-# plt.show()
+ax.set_xlabel('Depth')
+ax.set_ylabel('Time (seconds)')
+
 fig.savefig('bench/state_paper_bench/output/state_bad.png', bbox_inches = "tight")
+
+
+fig = plt.figure()
+ax = fig.add_subplot(111)
+
+grapher(list(filter(lambda x: (f"{x['label']}{x['parameters']['variation']}" in good_ones) and (float(x['parameters']['depth']) < 10), res)), ax, parameter_name='depth')
+
+ax.set_xlabel('Depth')
+ax.set_ylabel('Time (seconds)')
+
+fig.savefig('bench/state_paper_bench/output/state_small.png', bbox_inches = "tight")
 
 res = []
 for x in files:
     with open(x) as f:
         res += parse_hyperfine(f)
 
-table = []
 
 baseValue = None
 for r in res:
-    if r['label'] == 'libseff' and r['parameters']['variation'] == '_direct' and r['parameters']['depth'] == '0':
+    if r['label'] == 'native' and r['parameters']['variation'] == '' and r['parameters']['depth'] == '0':
         baseValue = float(r['measurement'])
 
+# Add general
+general = {'Case': 'General'}
+optimal = {'Case': 'Optimal'}
 for r in res:
-    d = {}
-    d['Framework'] = r['label']
-    d['Depth'] = r['parameters']['depth']
-    m = float(r['measurement'])
-    s = float(r['stddev'])
-    d['Mean [ms]'] = f"{(m * 1000):.2f} ± {(s * 1000):.2f}"
-    d['Relative'] = f"{(m / baseValue):.2f}"
-    table.append(d)
+    if r['parameters']['depth'] == '0':
+        m = float(r['measurement'])
+        s = float(r['stddev'])
+        l = r['label']
+        if l == 'cpp-effects':
+            l = 'cppeffects'
+        l = '\\' + l
+        # d['Mean [ms]'] = f"{(m * 1000):.2f} ± {(s * 1000):.2f}"
+        value = f"{(m * 1000):.2f}s ({(m / baseValue):.2f}x)"
+        # print(f"{r['label']}{r['parameters']['variation']}")
+        if (f"{r['label']}{r['parameters']['variation']}" in good_ones):
+            optimal[l] = value
+        if (f"{r['label']}{r['parameters']['variation']}" in bad_ones):
+            general[l] = value
 
-table = sorted(table, key = lambda x: float(x['Relative']))
+# for r in res:
+#     d = {}
+#     d['Framework'] = r['label']
+#     d['Depth'] = r['parameters']['depth']
+#     m = float(r['measurement'])
+#     s = float(r['stddev'])
+#     d['Mean [ms]'] = f"{(m * 1000):.2f} ± {(s * 1000):.2f}"
+#     d['Relative'] = f"{(m / baseValue):.2f}"
+#     table.append(d)
+
+# table = sorted(table, key = lambda x: float(x['Relative']))
 
 with open("bench/state_paper_bench/output/state.tex", "w") as f:
-    f.write(format_dict(table))
+    f.write(format_dict([general, optimal]))

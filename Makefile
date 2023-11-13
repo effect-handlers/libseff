@@ -161,7 +161,7 @@ output-imgs:
 
 all_http_imgs: output-imgs/http_threads.png output-imgs/http_conn.png output-imgs/http_rps_1.png output-imgs/http_rps_8.png output-imgs/http_rps_16.png output-imgs/http_rps_32.png output-imgs/http_memory.png
 
-all_imgs: output-imgs/state_good.png output-imgs/state_bad.png output-imgs/hot_split.png output-imgs/ad.png output-imgs/prefetch.png all_http_imgs
+all_imgs: output-imgs/state_good.png output-imgs/state_bad.png output-imgs/state_small.png output-imgs/hot_split.png output-imgs/ad.png output-imgs/prefetch.png all_http_imgs
 
 output-imgs/state_%.png: all | output-imgs
 	$(MAKE) BUILD=${BUILD} -C bench/state_paper_bench output/state_$*.png
