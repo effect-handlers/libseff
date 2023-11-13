@@ -11,11 +11,12 @@
 #include "seff.h"
 #endif
 
-int8_t *__attribute_noinline__ bottom(int8_t idx) {
-    int8_t arr[BOTTOM_ARR];
-    arr[idx] = 0;
+int8_t v;
 
-    return arr + idx;
+int8_t *__attribute_noinline__ bottom(int8_t *idx) {
+    volatile int8_t arr[BOTTOM_ARR];
+    __asm__("" : "=o"(v) : "o"(v));
+    return arr;
 }
 
 void *__attribute_noinline__ top(void *_arg) {
@@ -26,7 +27,7 @@ void *__attribute_noinline__ top(void *_arg) {
 #endif
 
     for (int i = 0; i < REPS; ++i) {
-        int8_t *a = bottom(ret);
+        int8_t *a = bottom(&ret);
 
 #ifdef DEALLOC
         seff_frame_ptr_t next_frame = curr->frame_ptr->next;
@@ -37,8 +38,7 @@ void *__attribute_noinline__ top(void *_arg) {
             free(old);
         }
 #endif
-
-        ret = a[ret] + a[0] * ret;
+        asm("" : "=r"(a), "=m"(ret) : "r"(a), "m"(ret));
     }
 
     return (void *)(uintptr_t)ret;

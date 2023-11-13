@@ -30,10 +30,10 @@ output/%.dmp: output/% | output
 	objdump -S --disassemble=bottom $< > $@
 
 output/bench-libseff.json: output/libseff_fixed output/libseff_baseline output/libseff_hot_split output/libseff_red_zone output/libseff_dealloc | output
-	hyperfine -L "variation" _fixed,_baseline,_hot_split,_dealloc -w5  --export-json $@ -n "libseff" "output/libseff{variation}"
+	hyperfine -L "variation" _fixed,_baseline,_hot_split,_dealloc -w30 -r50  --export-json $@ -n "libseff" "output/libseff{variation}"
 
 output/bench-native.json: output/native | output
-	hyperfine -L "variation" "" -w5  --export-json $@ -n "native" "output/native{variation}"
+	hyperfine -L "variation" "" -w30 -r50  --export-json $@ -n "native" "output/native{variation}"
 
 output/hot_split.png: output/bench-libseff.json output/bench-native.json graph.py | output
 	cd ../.. ; python3 -m bench.hot_split_bench.graph
