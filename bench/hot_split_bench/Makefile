@@ -27,13 +27,16 @@ output/native: native.c common.inc | output
 
 # We care about the dump to see exactly the generated code
 output/%.dmp: output/% | output
-	objdump -S --disassemble=bottom $< > $@
+	objdump  -D $< > $@
+# --disassemble=bottom
+
+HYP_ARGS := -w5 -r10 -L mults 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 
 output/bench-libseff.json: output/libseff_fixed output/libseff_baseline output/libseff_hot_split output/libseff_red_zone output/libseff_dealloc | output
-	hyperfine -L "variation" _fixed,_baseline,_hot_split,_dealloc -w30 -r50  --export-json $@ -n "libseff" "output/libseff{variation}"
+	hyperfine $(HYP_ARGS)  -L "variation" _fixed,_baseline,_hot_split,_dealloc  --export-json $@ -n "libseff" "output/libseff{variation}  {mults}"
 
 output/bench-native.json: output/native | output
-	hyperfine -L "variation" "" -w30 -r50  --export-json $@ -n "native" "output/native{variation}"
+	hyperfine $(HYP_ARGS)  -L "variation" ""   --export-json $@ -n "native" "output/native{variation} {mults}"
 
 output/hot_split.png: output/bench-libseff.json output/bench-native.json graph.py | output
 	cd ../.. ; python3 -m bench.hot_split_bench.graph
