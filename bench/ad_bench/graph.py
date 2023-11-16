@@ -22,6 +22,8 @@ ax = fig.add_subplot(111)
 grapher(res, ax)
 # ax.set_ylim(0, 0.15)
 ax.legend()
+ax.set_xlabel('Iterations')
+ax.set_ylabel('Time (seconds)')
 
 # plt.show()
 fig.savefig('bench/ad_bench/output/ad.png', bbox_inches = "tight")

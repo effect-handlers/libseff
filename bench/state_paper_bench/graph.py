@@ -38,12 +38,12 @@ bad_ones = [
     'libmpeff_once',
 ]
 
-
+big_depth = [0, 10, 20, 40, 60, 80, 100]
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
 
-grapher(list(filter(lambda x: f"{x['label']}{x['parameters']['variation']}" in good_ones, res)), ax, parameter_name='depth')
+grapher(list(filter(lambda x: (f"{x['label']}{x['parameters']['variation']}" in good_ones) and (int(x['parameters']['depth']) in big_depth), res)), ax, parameter_name='depth')
 
 ax.set_xlabel('Depth')
 ax.set_ylabel('Time (seconds)')
@@ -55,7 +55,7 @@ fig.savefig('bench/state_paper_bench/output/state_good.png', bbox_inches = "tigh
 fig = plt.figure()
 ax = fig.add_subplot(111)
 
-grapher(list(filter(lambda x: f"{x['label']}{x['parameters']['variation']}" in bad_ones, res)), ax, parameter_name='depth')
+grapher(list(filter(lambda x: (f"{x['label']}{x['parameters']['variation']}" in bad_ones) and (int(x['parameters']['depth']) in big_depth), res)), ax, parameter_name='depth')
 
 ax.set_xlabel('Depth')
 ax.set_ylabel('Time (seconds)')

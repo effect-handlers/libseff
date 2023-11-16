@@ -35,7 +35,7 @@ styles = {
 }
 
 markers = chain.from_iterable(repeat(["v", "^", "s", "D", "p", "|", "x"]))
-colours = chain.from_iterable(repeat(["blue", "gray", "magenta", "yellow", "green", "orange"]))
+colours = chain.from_iterable(repeat(["blue", "gray", "magenta", "purple", "green", "orange"]))
 
 
 def getStyle(label):

@@ -40,13 +40,13 @@ output/rust_hyper: external/retro-httpaf-bench/rust-hyper | output
 # CONNECTIONS = 100 1000 5000 10000 50000
 # RPS = 35000 50000 100000 200000 400000 800000 1500000 2000000
 
-THREADS	= 1 8 16 32
-CONNECTIONS = 1000
-RPS = 35000 50000 100000 200000 400000 800000 1500000 2000000
+THREADS	= 1 8 16
+CONNECTIONS = 1000 5000 10000
+RPS = 50000 100000 500000 1000000 1500000 2000000
 
 
 FORCE:
-output/bench-%: output/% FORCE $(WRK) | output
+output/bench-%: output/% $(WRK) | output
 	for th in ${THREADS}; do \
       export GOMAXPROCS=$$th; \
       export COHTTP_DOMAINS=$$th; \
@@ -60,7 +60,7 @@ output/bench-%: output/% FORCE $(WRK) | output
 			./$< &  \
 			running_pid=$$!; \
 			sleep 2; \
-			$(WRK) -t 32 -d10s -L -s ${DEPS_DIR}/utils/json.lua -R $$rps -c $$conn http://localhost:8082 > $@-$$conn-$$th-$$rps.txt; \
+			$(WRK) -t 32 -d30s -L -s ${DEPS_DIR}/utils/json.lua -R $$rps -c $$conn http://localhost:8082 > $@-$$conn-$$th-$$rps.txt; \
 			grep VmPeak /proc/$${running_pid}/status >  $@-$$conn-$$th-$$rps.memory; \
 			kill $${running_pid}; \
 			sleep 1; \

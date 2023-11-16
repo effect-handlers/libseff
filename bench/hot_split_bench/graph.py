@@ -47,7 +47,8 @@ for (k, d) in values.items():
         'Case': k
     }
     for k in [0, 5, 10, 15, 20]:
-        res[str(k)] = f"{d[k] / values['native '][k] :.2f}"
+        minValue = min([values[l][k] for l in values.keys()])
+        res[str(k)] = f"{d[k] / minValue :.2f}"
     table.append(res)
 # minValue = min([float(r['measurement']) for r in res])
 # for r in res:

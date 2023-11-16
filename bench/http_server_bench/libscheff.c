@@ -79,7 +79,8 @@ int phr_structed(phr_parse_args *args) {
 
 MAKE_SYSCALL_WRAPPER(int, phr_structed, phr_parse_args *);
 
-#define BUF_SIZE 64 * 1024
+#define RESPONSE_BUF_SIZE 8 * 1024
+#define REQUEST_BUF_SIZE 512
 #define MAX_HEADERS 100
 _Atomic int n_connections = 1;
 void *connection_fun(void *_arg) {
@@ -89,8 +90,8 @@ void *connection_fun(void *_arg) {
     conn_log("Established connection to client\n");
 
     int conn_fd = (int)(uintptr_t)_arg;
-    char msg_buffer[BUF_SIZE];
-    char response_buffer[BUF_SIZE];
+    char msg_buffer[REQUEST_BUF_SIZE];
+    char response_buffer[RESPONSE_BUF_SIZE];
 
     while (1) {
         // While every new request comes, and the client doesn't close the connection
@@ -119,7 +120,7 @@ void *connection_fun(void *_arg) {
 
         while (1) {
             // While the request hasn't been received completely
-            int n_read = await_recv(conn_fd, msg_buffer + buflen, BUF_SIZE - buflen);
+            int n_read = await_recv(conn_fd, msg_buffer + buflen, REQUEST_BUF_SIZE - buflen);
             if (n_read == 0) {
                 conn_log("Connection closed by client\n");
                 close_syscall_wrapper(conn_fd);
@@ -149,7 +150,7 @@ void *connection_fun(void *_arg) {
                 }
                 /* request is incomplete, continue the loop */
                 assert(parse_ret == -2);
-                if (buflen == BUF_SIZE) {
+                if (buflen == REQUEST_BUF_SIZE) {
                     conn_log("Not enough size on the buffer\n");
                     break;
                 }
@@ -160,7 +161,7 @@ void *connection_fun(void *_arg) {
             conn_log("server: got method %.*s path %.*s\n", (int)method_len, method, (int)path_len,
                 path);
             if (strncmp_syscall_wrapper("/", path, path_len) == 0) {
-                int ret = build_response_syscall_wrapper(response_buffer, BUF_SIZE,
+                int ret = build_response_syscall_wrapper(response_buffer, RESPONSE_BUF_SIZE,
                     "HTTP/1.1 200 OK", "text/plain", (void *)RESPONSE_TEXT, strlen(RESPONSE_TEXT));
                 if (ret >= 0) {
                     await_send_all(conn_fd, response_buffer, ret);
@@ -170,7 +171,7 @@ void *connection_fun(void *_arg) {
             } else if (strncmp_syscall_wrapper("/prof", path, path_len) == 0) {
                 // TODO actually send the prof values as the reply
                 int ret = build_response_syscall_wrapper(
-                    response_buffer, BUF_SIZE, "HTTP/1.1 200 OK", "text/plain", NULL, 0);
+                    response_buffer, RESPONSE_BUF_SIZE, "HTTP/1.1 200 OK", "text/plain", NULL, 0);
                 if (ret >= 0) {
                     await_send_all(conn_fd, response_buffer, ret);
                 } else {
@@ -178,8 +179,8 @@ void *connection_fun(void *_arg) {
                 }
             } else {
                 conn_log("Path %.*s not found\n", (int)path_len, path);
-                int ret = build_response_syscall_wrapper(
-                    response_buffer, BUF_SIZE, "HTTP/1.1 404 Not Found", "text/plain", NULL, 0);
+                int ret = build_response_syscall_wrapper(response_buffer, RESPONSE_BUF_SIZE,
+                    "HTTP/1.1 404 Not Found", "text/plain", NULL, 0);
                 if (ret >= 0) {
                     await_send_all(conn_fd, response_buffer, ret);
                 } else {
