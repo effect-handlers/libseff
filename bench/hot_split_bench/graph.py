@@ -32,7 +32,7 @@ for r in res:
 fig = plt.figure()
 ax = fig.add_subplot(111)
 grapher(res, ax, parameter_name='mults')
-# ax.set_ylim(0, 0.5)
+ax.set_ylim(bottom=0)
 ax.set_xlabel("Multiplications")
 ax.set_ylabel("Time (seconds)")
 ax.legend()

@@ -39,6 +39,10 @@ for g in glob('./bench/http_server_bench/output/bench-*.txt'):
         reqs += parse_wrk2(f)
 
 reqs = [r for r in reqs if r['parameters']['Connections'] != '50000']
+for r in reqs:
+    l = r['label']
+    if l == 'libscheff':
+        r['label'] = 'libseff'
 
 # graph_http(reqs, 'Number of threads', {'Connections': '100', 'Requests per second': '100000'}, 'http_threads_100')
 graph_http(reqs, 'Number of threads', {'Connections': '1000', 'Requests per second': '100000'}, 'http_threads_1000')
@@ -78,8 +82,10 @@ for g in glob('./bench/http_server_bench/output/bench-*.memory'):
     with open(g) as f:
         mem += parse_memory(f)
 mem = [m for m in mem if m['parameters']['Connections'] != '50000']
-
 for m in mem:
+    l = m['label']
+    if l == 'libscheff':
+        m['label'] = 'libseff'
     m['measurement'] = m['measurement'] / 1024
     m['unit'] = 'MB'
 

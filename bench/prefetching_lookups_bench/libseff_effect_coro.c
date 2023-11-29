@@ -2,6 +2,7 @@
 #include "seff.h"
 #include <stdio.h>
 
+seff_coroutine_t coro_pool[30];
 long SeffEffectMultiLookup(
     int v[], size_t v_size, int lookups[], size_t lookups_size, int streams) {
 
@@ -11,7 +12,7 @@ long SeffEffectMultiLookup(
     int limit = streams;
     coro_queue q;
     coro_queue_init(&q);
-    const size_t coro_size = 4096;
+    const size_t coro_size = 256;
 
     search_args *args = calloc(lookups_size, sizeof(search_args));
 
@@ -21,15 +22,19 @@ long SeffEffectMultiLookup(
         args[i].key = lookups[i];
     }
 
+    seff_coroutine_t *next_coro = coro_pool;
     for (size_t next_arg = 0; next_arg < lookups_size;) {
         while (next_arg < lookups_size && limit > 0) {
             limit--;
-            seff_coroutine_t *coro = seff_coroutine_new_sized(
-                SeffEffectBinarySearch, (void *)(args + next_arg), coro_size);
+            // seff_coroutine_t *coro = seff_coroutine_new_sized(
+            //     SeffEffectBinarySearch, (void *)(args + next_arg), coro_size);
+            seff_coroutine_init_sized(
+                next_coro, SeffEffectBinarySearch, (void *)(args + next_arg), coro_size);
             next_arg++;
             // We assume SeffBinarySearch will copy the values right after the first resume
             //   seff_resume(coro, NULL);
-            coro_queue_enqueue(&q, (task_t){coro, NULL});
+            coro_queue_enqueue(&q, (task_t){next_coro, NULL});
+            next_coro++;
         }
 
         while (limit == 0) {
@@ -43,7 +48,9 @@ long SeffEffectMultiLookup(
                     bool res = (bool)payload.result ? 1 : 0;
                     found_count += res;
                     not_found_count += 1 - res;
-                    seff_coroutine_delete(coro);
+                    // seff_coroutine_delete(coro);
+                    seff_coroutine_release(coro);
+                    next_coro = coro;
                     limit++;
                     break;
                 });
@@ -68,7 +75,8 @@ long SeffEffectMultiLookup(
                 bool res = (bool)payload.result ? 1 : 0;
                 found_count += res;
                 not_found_count += 1 - res;
-                seff_coroutine_delete(coro);
+                // seff_coroutine_delete(coro);
+                seff_coroutine_release(coro);
                 limit++;
                 break;
             });

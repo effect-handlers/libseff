@@ -22,6 +22,16 @@ for x in files:
     with open(x) as f:
         res += parse_hyperfine(f)
 
+for r in res:
+    l = r['label']
+    if l == 'naive':
+        l = 'sequential'
+    elif l =='coro':
+        l = 'C++ coroutines'
+    elif l == 'libseff_effect_coro':
+        l = 'libseff'
+    r['label'] = l
+
 fig = plt.figure()
 ax = fig.add_subplot(111)
 
@@ -50,6 +60,10 @@ resBest = list(sorted(resBest, key=lambda x: float(x['parameters']['streams'])))
 # ax = fig.add_subplot(111)
 
 grapher(resBest, ax, extraStyle={'markersize': 12, 'alpha': 1.0})
+
+ax.set_xlabel('Concurrent searches')
+ax.set_ylabel('Time (seconds)')
+ax.set_ylim(bottom=0)
 
 fig.savefig('bench/prefetching_lookups_bench/output/prefetch.png', bbox_inches = "tight")
 

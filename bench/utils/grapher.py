@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 from itertools import chain, repeat
+# print(plt.rcParams) 10
+plt.rcParams.update({'font.size': 14})
 
 
 def getParamName(results):
