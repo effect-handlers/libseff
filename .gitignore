@@ -57,9 +57,15 @@ asm/seff_types.S
 
 # Output folders
 output
+output-segmented
+output-fixed
+output-imgs
 
 # Python cache
-decls/__pycache__
+__pycache__
+
+# Python enviroments
+.venvs
 
 # VSCode
 .vscode
@@ -69,3 +75,6 @@ decls/__pycache__
 
 # Python venvs
 .venvs/
+
+# We don't want to publish ocaml code
+bench/ad_bench/ocaml

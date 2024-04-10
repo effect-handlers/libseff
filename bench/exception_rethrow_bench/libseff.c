@@ -10,7 +10,6 @@ DEFINE_EFFECT(runtime_error, 10, void, { char *msg; });
 
 #define KB (1024)
 
-seff_coroutine_t children[MAX_DEPTH];
 size_t caught = 0;
 
 void *computation(void *_arg) {
@@ -18,11 +17,12 @@ void *computation(void *_arg) {
     if (depth == 0) {
         THROW(runtime_error, "error");
     } else {
-        seff_coroutine_init(&children[depth], computation, (void *)(depth - 1));
-        seff_request_t exn = seff_handle(&children[depth], NULL, HANDLES(runtime_error));
+        seff_coroutine_t *k = seff_coroutine_new(computation, (void *)(depth - 1));
+        seff_request_t exn = seff_handle(k, NULL, HANDLES(runtime_error));
         switch (exn.effect) {
             CASE_EFFECT(exn, runtime_error, {
                 caught++;
+                seff_coroutine_delete(k);
                 THROW(runtime_error, payload.msg);
                 break;
             });
@@ -34,14 +34,9 @@ void *computation(void *_arg) {
 }
 
 int main(void) {
-    seff_coroutine_t k;
-    seff_coroutine_init_sized(&k, computation, (void *)(MAX_DEPTH - 1), 16 * KB);
-    for (size_t depth = 0; depth < MAX_DEPTH; depth++) {
-        seff_coroutine_init_sized(&children[depth], computation, NULL, 16 * KB);
-    }
-
     for (size_t i = 0; i < 100000; i++) {
-        seff_request_t exn = seff_handle(&k, NULL, HANDLES(runtime_error));
+        seff_coroutine_t *k = seff_coroutine_new(computation, (void *)(MAX_DEPTH - 1));
+        seff_request_t exn = seff_handle(k, NULL, HANDLES(runtime_error));
         switch (exn.effect) {
             CASE_EFFECT(exn, runtime_error, {
                 caught++;
@@ -51,11 +46,7 @@ int main(void) {
         default:
             assert(false);
         }
-        seff_coroutine_init_sized(&k, computation, (void *)(MAX_DEPTH - 1), 16 * KB);
-    }
-    seff_coroutine_release(&k);
-    for (size_t depth = 0; depth < MAX_DEPTH; depth++) {
-        seff_coroutine_release(&children[depth]);
+        seff_coroutine_delete(k);
     }
     printf("Caught %lu exceptions\n", caught);
     return 0;

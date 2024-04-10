@@ -12,7 +12,7 @@
 #
 
 #include "../asm/dwarf.S"
-#include "../asm/seff_types.S"
+#include "seff_types.S"
 
 # Clang/GCC -fsplit-stack expects the address of the top of the current segment to be
 # located in %fs:0x70 (for 64 bits) or %fs:0x40 (for 32 bits). When we're not living

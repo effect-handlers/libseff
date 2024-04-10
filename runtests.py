@@ -1,15 +1,15 @@
 #!/usr/bin/python3
 
-# 
+#
 # Copyright (c) 2023 Huawei Technologies Co., Ltd.
-# 
+#
 # libseff is licensed under Mulan PSL v2.
-# You can use this software according to the terms and conditions of the Mulan PSL v2. 
+# You can use this software according to the terms and conditions of the Mulan PSL v2.
 # You may obtain a copy of Mulan PSL v2 at:
-# 	    http://license.coscl.org.cn/MulanPSL2 
+# 	    http://license.coscl.org.cn/MulanPSL2
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
-# FIT FOR A PARTICULAR PURPOSE.  
+# FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
 #
 # Concurrent test runner for libseff
@@ -20,14 +20,14 @@ from glob import glob
 from typing import Set,Tuple
 
 excluded_tests = {
-    './output/tests/echo_server',
-    './output/tests/many_threads'
+    './output-segmented/tests/echo_server',
+    './output-segmented/tests/many_threads'
 }
 
-subprocess.run(["make", "test"])
+subprocess.run(["make", "test", "BUILD=debug", "STACK_POLICY=segmented"])
 
 testcases = [
-    test for test in glob("./output/tests/*")
+    test for test in glob("./output-segmented/tests/*")
     if not test in excluded_tests and test[-2:] != '.o'
 ]
 
