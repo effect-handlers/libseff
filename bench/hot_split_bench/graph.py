@@ -20,8 +20,17 @@ for x in files:
     with open(x) as f:
         res += parse_hyperfine(f)
 
+order = {
+    'native': 1,
+    'libseff_baseline': 2,
+    'libseff_fixed': 3,
+    'libseff_hot_split': 4,
+    'libseff_dealloc': 5,
+}
+res = sorted(res, key = lambda r: order[f"{r['label']}{r['parameters']['variation']}"])
+
 for r in res:
-    l = f"{r['label']} {r['parameters']['variation'].replace('_', ' ')}"
+    l = f"{r['label']}{r['parameters']['variation'].replace('_', ' ')}"
     r['label'] = l
     if (l not in values):
         values[l] = {}

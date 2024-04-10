@@ -33,7 +33,7 @@ output/%.dmp: output/% | output
 HYP_ARGS := -w5 -r10 -L mults 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 
 output/bench-libseff.json: output/libseff_fixed output/libseff_baseline output/libseff_hot_split output/libseff_red_zone output/libseff_dealloc | output
-	hyperfine $(HYP_ARGS)  -L "variation" _fixed,_baseline,_hot_split,_dealloc  --export-json $@ -n "libseff" "output/libseff{variation}  {mults}"
+	hyperfine $(HYP_ARGS)  -L "variation" _dealloc,_fixed,_baseline,_hot_split  --export-json $@ -n "libseff" "output/libseff{variation}  {mults}"
 
 output/bench-native.json: output/native | output
 	hyperfine $(HYP_ARGS)  -L "variation" ""   --export-json $@ -n "native" "output/native{variation} {mults}"

@@ -55,6 +55,10 @@ graph_http(reqs, 'Connections', {'Number of threads': '16', 'Requests per second
 graph_http(reqs, 'Requests per second', {'Connections': '1000', 'Number of threads': '1'}, 'http_rps_1', xlabel='Requests offered per second', ylabel='Requests served per second')
 graph_http(reqs, 'Requests per second', {'Connections': '1000', 'Number of threads': '8'}, 'http_rps_8', xlabel='Requests offered per second', ylabel='Requests served per second')
 graph_http(reqs, 'Requests per second', {'Connections': '1000', 'Number of threads': '16'}, 'http_rps_16', xlabel='Requests offered per second', ylabel='Requests served per second')
+
+graph_http(reqs, 'Requests per second', {'Connections': '10000', 'Number of threads': '1'}, 'http_rps_10000_1', xlabel='Requests offered per second', ylabel='Requests served per second')
+graph_http(reqs, 'Requests per second', {'Connections': '10000', 'Number of threads': '8'}, 'http_rps_10000_8', xlabel='Requests offered per second', ylabel='Requests served per second')
+graph_http(reqs, 'Requests per second', {'Connections': '10000', 'Number of threads': '16'}, 'http_rps_10000_16', xlabel='Requests offered per second', ylabel='Requests served per second')
 # graph_http(reqs, 'Requests per second', {'Connections': '1000', 'Number of threads': '32'}, 'http_rps_32', xlabel='Requests offered per second', ylabel='Requests served per second')
 
 for r in reqs:

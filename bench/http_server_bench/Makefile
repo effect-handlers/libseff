@@ -44,6 +44,46 @@ THREADS	= 1 8 16
 CONNECTIONS = 1000 5000 10000
 RPS = 50000 100000 500000 1000000 1500000 2000000
 
+WRK_TIME = 30
+
+# output/bench-nginx: $(WRK) | output
+# 	for th in ${THREADS}; do \
+# 		for conn in ${CONNECTIONS}; do \
+# 			for rps in ${RPS}; do \
+# 				echo Running nginx with $$th threads $$conn connections $$rps rps; \
+# 				echo =======; \
+# 				sudo nginx -c ~/Repos/libseff/bench/http_server_bench/nginx_$$th.conf; \
+# 				running_pid=`cat /run/nginx.pid`; \
+# 				sleep 3; \
+# 				$(WRK) -t 32 -d${WRK_TIME}s -L -s ${DEPS_DIR}/utils/json.lua -R $$rps -c $$conn http://localhost:8082 > $@-$$conn-$$th-$$rps.txt; \
+# 				python3 ./utils/gatherVmPeak.py $${running_pid} >  $@-$$conn-$$th-$$rps.memory; \
+# 				sudo nginx -c ~/Repos/libseff/bench/http_server_bench/nginx_$$th.conf -s stop; \
+# 				sleep 3; \
+# 			done; \
+# 		done; \
+# 	done;
+
+# sudo nginx -c ~/Repos/libseff/bench/http_server_bench/nginx_$${th}_te.conf & \
+# running_pid=$$!;
+# sudo kill -s9 $${running_pid}; \
+
+output/bench-nginx_te: $(WRK) | output
+	for th in ${THREADS}; do \
+		for conn in ${CONNECTIONS}; do \
+			for rps in ${RPS}; do \
+				echo Running nginx with $$th threads $$conn connections $$rps rps; \
+				echo =======; \
+				sudo nginx -c ~/Repos/libseff/bench/http_server_bench/nginx_$$th.conf; \
+				running_pid=`cat /run/nginx.pid`; \
+				sleep 3; \
+				$(WRK) -t 32 -d${WRK_TIME}s -L -s ${DEPS_DIR}/utils/json.lua -R $$rps -c $$conn http://localhost:8082 > $@-$$conn-$$th-$$rps.txt; \
+				python3 ./utils/gatherVmPeak.py $${running_pid} >  $@-$$conn-$$th-$$rps.memory; \
+				sudo nginx -c ~/Repos/libseff/bench/http_server_bench/nginx_$$th.conf -s stop; \
+				sleep 3; \
+			done; \
+		done; \
+	done;
+
 
 FORCE:
 output/bench-%: output/% $(WRK) | output
@@ -60,7 +100,7 @@ output/bench-%: output/% $(WRK) | output
 			./$< &  \
 			running_pid=$$!; \
 			sleep 2; \
-			$(WRK) -t 32 -d30s -L -s ${DEPS_DIR}/utils/json.lua -R $$rps -c $$conn http://localhost:8082 > $@-$$conn-$$th-$$rps.txt; \
+			$(WRK) -t 32 -d${WRK_TIME}s -L -s ${DEPS_DIR}/utils/json.lua -R $$rps -c $$conn http://localhost:8082 > $@-$$conn-$$th-$$rps.txt; \
 			grep VmPeak /proc/$${running_pid}/status >  $@-$$conn-$$th-$$rps.memory; \
 			kill $${running_pid}; \
 			sleep 1; \
@@ -68,9 +108,7 @@ output/bench-%: output/% $(WRK) | output
 	  done; \
 	done;
 
-output/http_%.png: graph.py | output
+graphs: graph.py | output
 	cd ../.. ; python3 -m bench.http_server_bench.graph
 
-graphs: output/http_threads.png output/http_conn.png output/http_rps_1.png output/http_rps_8.png output/http_rps_16.png output/http_rps_32.png output/http_memory.png
-
-bench: output/bench-libscheff output/bench-cohttp_eio output/bench-nethttp_go output/bench-rust_hyper
+bench: output/bench-libscheff output/bench-cohttp_eio output/bench-nethttp_go output/bench-rust_hyper output/bench-nginx_te
