@@ -30,7 +30,7 @@ void *skynet(void *_arg) {
         while (finished < 10) {
             for (size_t i = 0; i < 10; i++) {
                 if (children[i]->state != FINISHED) {
-                    seff_handle(children[i], NULL, 0);
+                    seff_resume(children[i], NULL, 0);
                 }
                 if (children[i]->state == FINISHED) {
                     finished++;
@@ -58,7 +58,7 @@ int64_t bench(int n_workers, int depth) {
 
     int64_t total = 0;
 
-    seff_request_t eff = seff_handle(root, NULL, HANDLES(yield_int));
+    seff_request_t eff = seff_resume(root, NULL, HANDLES(yield_int));
     while (true) {
         switch (eff.effect) {
             CASE_EFFECT(eff, yield_int, {
@@ -69,7 +69,7 @@ int64_t bench(int n_workers, int depth) {
         default:
             assert(false);
         }
-        eff = seff_handle(root, NULL, HANDLES(yield_int));
+        eff = seff_resume(root, NULL, HANDLES(yield_int));
     }
 
     return total;

@@ -24,7 +24,7 @@ void *bar(void *_child) {
     seff_coroutine_t *child = (seff_coroutine_t *)_child;
 
     char *response = NULL;
-    seff_request_t request = seff_handle(child, response, HANDLES(get_name));
+    seff_request_t request = seff_resume(child, response, HANDLES(get_name));
     switch (request.effect) {
         CASE_EFFECT(request, get_name, {
             response = "bar1";
@@ -34,7 +34,7 @@ void *bar(void *_child) {
         assert(false);
     }
 
-    request = seff_handle(child, response, HANDLES(get_name));
+    request = seff_resume(child, response, HANDLES(get_name));
     switch (request.effect) {
         CASE_EFFECT(request, get_name, {
             response = "bar2";
@@ -44,7 +44,7 @@ void *bar(void *_child) {
         assert(false);
     }
 
-    request = seff_handle(child, response, HANDLES(get_name));
+    request = seff_resume(child, response, HANDLES(get_name));
     switch (request.effect) {
         CASE_EFFECT(request, get_name, {
             response = "bar3";
@@ -60,18 +60,18 @@ void *bar(void *_child) {
 int main(void) {
     seff_coroutine_t *k = seff_coroutine_new(foo, NULL);
 
-    seff_request_t request = seff_handle(k, NULL, HANDLES(get_name) | HANDLES(print));
+    seff_request_t request = seff_resume(k, NULL, HANDLES(get_name) | HANDLES(print));
     assert(request.effect == EFF_ID(get_name));
 
     char *main_name = "main";
-    request = seff_handle(k, main_name, HANDLES(get_name) | HANDLES(print));
+    request = seff_resume(k, main_name, HANDLES(get_name) | HANDLES(print));
     assert(request.effect == EFF_ID(print));
     puts(((EFF_PAYLOAD_T(print) *)request.payload)->str);
 
     seff_coroutine_t *j = seff_coroutine_new(bar, k);
 
     while (1) {
-        request = seff_handle(j, NULL, HANDLES(print));
+        request = seff_resume(j, NULL, HANDLES(print));
         if (j->state == FINISHED)
             break;
         switch (request.effect) {

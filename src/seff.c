@@ -32,7 +32,9 @@
 
 extern __thread seff_coroutine_t *_seff_current_coroutine;
 
-seff_request_t seff_resume(seff_coroutine_t *k, void *arg) { return seff_handle(k, arg, ~0); }
+seff_request_t seff_resume_handling_all(seff_coroutine_t *k, void *arg) {
+    return seff_resume(k, arg, ~0);
+}
 
 void frame_push(seff_cont_t *cont, void *elt) {
     cont->rsp = (char *)cont->rsp - sizeof(void *);
@@ -149,7 +151,7 @@ default_handler_t *seff_set_default_handler(effect_id effect, default_handler_t 
 
 default_handler_t *seff_get_default_handler(effect_id effect) { return default_handlers[effect]; }
 
-void seff_throw(effect_id eff_id, void* payload) {
+void seff_throw(effect_id eff_id, void *payload) {
     // The state code is set by seff_exit
     seff_coroutine_t *handler = seff_locate_handler(eff_id);
     if (handler) {

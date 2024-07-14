@@ -19,7 +19,7 @@ long SeffEffectSingleLookup(int v[], size_t v_size, int lookups[], size_t lookup
         bool finished = false;
         int64_t last_read = 0;
         while (!finished) {
-            seff_request_t request = seff_handle(coro, (void *)last_read, HANDLES(deref));
+            seff_request_t request = seff_resume(coro, (void *)last_read, HANDLES(deref));
             switch (request.effect) {
                 CASE_RETURN(request, {
                     bool res = (bool)payload.result ? 1 : 0;

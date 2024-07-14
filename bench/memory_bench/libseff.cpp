@@ -36,7 +36,7 @@ void run_benchmark(int instances, int64_t depth, int padding) {
     coroutines = new seff_coroutine_t *[instances];
     for (auto i = 0; i < instances; i++) {
         coroutines[i] = seff_coroutine_new(fn, (void *)depth);
-        seff_resume(coroutines[i], nullptr);
+        seff_resume_handling_all(coroutines[i], nullptr);
     }
     // Removed to make the benchmark run faster
     /*

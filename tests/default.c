@@ -32,7 +32,7 @@ int main(void) {
     seff_coroutine_t k;
     seff_coroutine_init(&k, safe_computation, NULL);
 
-    seff_request_t exn = seff_handle(&k, NULL, HANDLES(division_by_zero));
+    seff_request_t exn = seff_resume(&k, NULL, HANDLES(division_by_zero));
     switch (exn.effect) {
         CASE_EFFECT(exn, division_by_zero, {
             printf("Caught division (%d / 0) in coroutine, continuing main\n", payload.dividend);

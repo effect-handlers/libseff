@@ -15,6 +15,6 @@ void *coroutine(void *arg) {
 int main(void) {
     seff_coroutine_t *k = seff_coroutine_new(coroutine, NULL);
     puts("Created coroutine");
-    seff_resume(k, NULL);
+    seff_resume_handling_all(k, NULL);
     seff_coroutine_delete(k);
 }

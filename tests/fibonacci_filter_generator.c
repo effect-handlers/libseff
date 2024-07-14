@@ -12,7 +12,7 @@
         seff_coroutine_t *self = seff_current_coroutine();                           \
         decorator_name##_args args = *(decorator_name##_args *)_args;                \
         while (true) {                                                               \
-            seff_request_t res = seff_resume(args.base_generator, NULL);             \
+            seff_request_t res = seff_resume_handling_all(args.base_generator, NULL);  \
             if (seff_finished(res)) {                                                \
                 return NULL;                                                         \
             } else {                                                                 \
@@ -61,7 +61,7 @@ int main(void) {
 
     int64_t next_elt;
     for (int i = 0; i < 1000; i++) {
-        seff_request_t req = seff_resume(filter_fib, fib);
+        seff_request_t req = seff_resume_handling_all(filter_fib, fib);
         if (seff_finished(req) == FINISHED) {
             break;
         } else {

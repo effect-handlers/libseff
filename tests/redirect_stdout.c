@@ -23,7 +23,7 @@ void *with_output_to_buffer(seff_start_fun_t *fn, void *arg, char *buffer) {
     char *buffptr = buffer;
 
     while (true) {
-        seff_request_t res = seff_handle(&k, NULL, HANDLES(print));
+        seff_request_t res = seff_resume(&k, NULL, HANDLES(print));
         switch (res.effect) {
             CASE_EFFECT(res, print, {
                 // Note we are NOT using strcpy!
@@ -43,7 +43,7 @@ void *with_output_to_default(seff_start_fun_t *fn, void *arg) {
     seff_coroutine_t k;
     seff_coroutine_init(&k, fn, arg);
 
-    seff_request_t res = seff_handle(&k, NULL, 0);
+    seff_request_t res = seff_resume(&k, NULL, 0);
     assert(res.effect == EFF_ID(return));
     return res.payload;
 }

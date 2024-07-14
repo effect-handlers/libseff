@@ -53,7 +53,7 @@ int main(void) {
         // printf("Scheduling coroutine...\n");
         seff_coroutine_t *next = dequeue(&queue);
         context_switches += 1;
-        seff_request_t result = seff_resume(next, NULL);
+        seff_request_t result = seff_resume_handling_all(next, NULL);
         if (seff_finished(result)) {
             results[done] = (int64_t)result.payload;
             done++;

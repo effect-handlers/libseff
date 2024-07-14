@@ -33,7 +33,7 @@ int main(void) {
     seff_coroutine_t *k = seff_coroutine_new_sized(fn, NULL, 0);
     k->frame_ptr->canary = (void *)0x0;
 
-    seff_resume(k, NULL);
+    seff_resume_handling_all(k, NULL);
 
     return (uintptr_t)k->frame_ptr->canary;
 }

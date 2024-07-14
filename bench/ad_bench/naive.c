@@ -75,7 +75,7 @@ void *example(void *args) {
 }
 
 void handle(seff_coroutine_t *k, prop_t *response) {
-    seff_request_t request = seff_handle(k, response, r_smooth);
+    seff_request_t request = seff_resume(k, response, r_smooth);
     switch (request.effect) {
         CASE_RETURN(request, {
             *(result->dv) = 1.0;
@@ -194,7 +194,7 @@ void *evaluate(seff_coroutine_t *k, void *args) {
     double *value = malloc(sizeof(double));
     *value = 0.0;
 
-    seff_request_t request = seff_handle(k, NULL, e_smooth);
+    seff_request_t request = seff_resume(k, NULL, e_smooth);
     while (true) {
         switch (request.effect) {
             CASE_RETURN(request, {
@@ -203,7 +203,7 @@ void *evaluate(seff_coroutine_t *k, void *args) {
             });
             CASE_EFFECT(request, e_ap0, {
                 *value = payload.value;
-                request = seff_handle(k, (void *)value, e_smooth);
+                request = seff_resume(k, (void *)value, e_smooth);
                 break;
             });
             CASE_EFFECT(request, e_ap1, {
@@ -213,7 +213,7 @@ void *evaluate(seff_coroutine_t *k, void *args) {
                     *value = -arg1;
                     break;
                 }
-                request = seff_handle(k, (void *)value, e_smooth);
+                request = seff_resume(k, (void *)value, e_smooth);
                 break;
             });
             CASE_EFFECT(request, e_ap2, {
@@ -227,7 +227,7 @@ void *evaluate(seff_coroutine_t *k, void *args) {
                     *value = arg1 * arg2;
                     break;
                 }
-                request = seff_handle(k, (void *)value, e_smooth);
+                request = seff_resume(k, (void *)value, e_smooth);
                 break;
             });
         }

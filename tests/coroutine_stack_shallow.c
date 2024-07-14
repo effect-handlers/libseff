@@ -33,7 +33,7 @@ int main(void) {
     int reps = 1;
     while (reps--) {
         seff_coroutine_t *a = seff_coroutine_new(coroutine_a, NULL);
-        seff_resume(a, NULL);
+        seff_resume_handling_all(a, NULL);
         seff_coroutine_delete(a);
     }
 }

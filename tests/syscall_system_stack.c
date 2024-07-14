@@ -18,6 +18,6 @@ int main(void) {
     hello_syscall_wrapper();
     seff_coroutine_t *k = seff_coroutine_new_sized(coroutine, NULL, 128);
     puts("Created coroutine");
-    seff_resume(k, NULL);
+    seff_resume_handling_all(k, NULL);
     seff_coroutine_delete(k);
 }

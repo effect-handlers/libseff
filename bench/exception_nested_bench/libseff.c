@@ -18,7 +18,7 @@ void *computation(void *_arg) {
         THROW(runtime_error, "error");
     } else {
         seff_coroutine_init(&children[depth], computation, (void *)(depth - 1));
-        seff_handle(&children[depth], NULL, 0);
+        seff_resume(&children[depth], NULL, 0);
     }
     return NULL;
 }
@@ -32,7 +32,7 @@ int main(void) {
     }
 
     for (size_t i = 0; i < 100000; i++) {
-        seff_request_t exn = seff_handle(&k, NULL, HANDLES(runtime_error));
+        seff_request_t exn = seff_resume(&k, NULL, HANDLES(runtime_error));
         switch (exn.effect) {
             CASE_EFFECT(exn, runtime_error, { caught++; });
             break;

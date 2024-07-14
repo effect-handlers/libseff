@@ -20,10 +20,10 @@ void *fibonacci_generator(void *arg) {
 int main(void) {
     seff_coroutine_t *fib = seff_coroutine_new(fibonacci_generator, (void *)10);
     while (true) {
-        // The extra argument to seff_resume will be passed to
+        // The extra argument to seff_resume_handling_all will be passed to
         // fibonacci_generator as the return value of the call to seff_yield. In
         // this case, it is just ignored.
-        seff_request_t req = seff_resume(fib, NULL);
+        seff_request_t req = seff_resume_handling_all(fib, NULL);
 
         if (seff_finished(req))
             break;

@@ -23,18 +23,18 @@ int main(void) {
     size_t requests = 0;
 
     seff_coroutine_t *k = seff_coroutine_new(coroutine, NULL);
-    seff_request_t request = seff_handle(k, NULL, HANDLES(get) | HANDLES(put));
+    seff_request_t request = seff_resume(k, NULL, HANDLES(get) | HANDLES(put));
 
     int64_t state = 0;
     while (requests < 100 * 1000 * 1000) { // 100.000.000
         switch (request.effect) {
             CASE_EFFECT(request, get, {
-                request = seff_handle(k, (void *)state, HANDLES(get) | HANDLES(put));
+                request = seff_resume(k, (void *)state, HANDLES(get) | HANDLES(put));
                 break;
             })
             CASE_EFFECT(request, put, {
                 state = payload.value;
-                request = seff_handle(k, NULL, HANDLES(get) | HANDLES(put));
+                request = seff_resume(k, NULL, HANDLES(get) | HANDLES(put));
                 break;
             })
         default:

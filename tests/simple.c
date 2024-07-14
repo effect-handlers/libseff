@@ -11,6 +11,6 @@ void *fn(void *arg) {
 
 int main(void) {
     seff_coroutine_t *k = seff_coroutine_new(fn, NULL);
-    seff_resume(k, NULL);
-    seff_resume(k, NULL);
+    seff_resume_handling_all(k, NULL);
+    seff_resume_handling_all(k, NULL);
 }

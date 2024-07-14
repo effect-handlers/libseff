@@ -51,9 +51,9 @@ E seff_coroutine_t *seff_current_coroutine(void);
 E __attribute__((no_split_stack)) void *seff_current_stack_top(void);
 #endif
 
-E __attribute__((no_split_stack)) seff_request_t seff_handle(
+E __attribute__((no_split_stack)) seff_request_t seff_resume(
     seff_coroutine_t *k, void *arg, effect_set handled);
-E seff_request_t seff_resume(seff_coroutine_t *k, void *arg);
+E seff_request_t seff_resume_handling_all(seff_coroutine_t *k, void *arg);
 
 typedef void *(default_handler_t)(void *);
 E default_handler_t *seff_set_default_handler(effect_id effect, default_handler_t *handler);

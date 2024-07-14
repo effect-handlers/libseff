@@ -28,7 +28,7 @@ long SeffEffectMultiLookup(
                 SeffEffectBinarySearch, (void *)(args + next_arg), coro_size);
             next_arg++;
             // We assume SeffBinarySearch will copy the values right after the first resume
-            //   seff_resume(coro, NULL);
+            //   seff_resume_handling_all(coro, NULL);
             coro_queue_enqueue(&q, (task_t){coro, NULL});
         }
 
@@ -37,7 +37,7 @@ long SeffEffectMultiLookup(
             seff_coroutine_t *coro = task.coro;
             int64_t *toRead = task.extra;
             seff_request_t request =
-                seff_handle(coro, toRead ? (void *)*toRead : NULL, HANDLES(deref));
+                seff_resume(coro, toRead ? (void *)*toRead : NULL, HANDLES(deref));
             switch (request.effect) {
                 CASE_RETURN(request, {
                     bool res = (bool)payload.result ? 1 : 0;
@@ -61,7 +61,7 @@ long SeffEffectMultiLookup(
         task_t task = coro_queue_dequeue(&q);
         seff_coroutine_t *coro = task.coro;
         int64_t *toRead = task.extra;
-        seff_request_t request = seff_handle(coro, toRead ? (void *)*toRead : NULL, HANDLES(deref));
+        seff_request_t request = seff_resume(coro, toRead ? (void *)*toRead : NULL, HANDLES(deref));
 
         switch (request.effect) {
             CASE_RETURN(request, {

@@ -35,8 +35,8 @@ void run_benchmark(int iterations, int64_t depth, int padding) {
     seff_coroutine_t *k1 = seff_coroutine_new(fn, (void *)depth);
     seff_coroutine_t *k2 = seff_coroutine_new(fn, (void *)depth);
     for (size_t i = 0; i < iterations / 2; i++) {
-        seff_resume(k1, nullptr);
-        seff_resume(k2, nullptr);
+        seff_resume_handling_all(k1, nullptr);
+        seff_resume_handling_all(k2, nullptr);
     }
     seff_coroutine_delete(k1);
     seff_coroutine_delete(k2);

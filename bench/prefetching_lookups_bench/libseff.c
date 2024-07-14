@@ -59,7 +59,7 @@ long SeffMultiLookup(int v[], size_t v_size, int lookups[], size_t lookups_size,
 
         while (1) {
             seff_coroutine_t *coro = coro_queue_dequeue(&q).coro;
-            int64_t res = (int64_t)seff_resume(coro, NULL).payload;
+            int64_t res = (int64_t)seff_resume_handling_all(coro, NULL).payload;
             if (res == -1) {
                 // keep looking next iter
                 coro_queue_enqueue(&q, (task_t){coro, NULL});
@@ -78,7 +78,7 @@ long SeffMultiLookup(int v[], size_t v_size, int lookups[], size_t lookups_size,
     // no more to add, finish up
     while (limit < streams) {
         seff_coroutine_t *coro = coro_queue_dequeue(&q).coro;
-        int64_t res = (int64_t)seff_resume(coro, NULL).payload;
+        int64_t res = (int64_t)seff_resume_handling_all(coro, NULL).payload;
         if (res == -1) {
             // keep looking next iter
             coro_queue_enqueue(&q, (task_t){coro, NULL});

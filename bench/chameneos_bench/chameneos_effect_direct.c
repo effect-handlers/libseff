@@ -16,7 +16,7 @@ void execute(size_t meetings, colour *creatures, size_t creaturesSize) {
         inits[i].col = creatures[i];
         chms[i] = seff_coroutine_new(chameneos, (void *)&inits[i]);
         // First resume, we assume it's not expecting anything
-        reqs[i] = seff_handle(chms[i], (void *)NULL, HANDLES(meet));
+        reqs[i] = seff_resume(chms[i], (void *)NULL, HANDLES(meet));
     }
 
     // This takes advantage of this problem structure, not really fair, but for experimental
@@ -53,12 +53,12 @@ void execute(size_t meetings, colour *creatures, size_t creaturesSize) {
         meetMsg.finish = false;
         meetMsg.chameneos = chameneosB;
         meetMsg.col = colB;
-        reqs[a] = seff_handle(chms[a], (void *)&meetMsg, HANDLES(meet));
+        reqs[a] = seff_resume(chms[a], (void *)&meetMsg, HANDLES(meet));
 
         meetMsg.finish = false;
         meetMsg.chameneos = chameneosA;
         meetMsg.col = colA;
-        reqs[b] = seff_handle(chms[b], (void *)&meetMsg, HANDLES(meet));
+        reqs[b] = seff_resume(chms[b], (void *)&meetMsg, HANDLES(meet));
     }
 
     uint64_t total_meetings = 0;
@@ -66,7 +66,7 @@ void execute(size_t meetings, colour *creatures, size_t creaturesSize) {
         chameneos_meet_t meetMsg;
         meetMsg.finish = true;
         // First resume
-        total_meetings += (uint64_t)seff_handle(chms[i], (void *)&meetMsg, HANDLES(meet)).payload;
+        total_meetings += (uint64_t)seff_resume(chms[i], (void *)&meetMsg, HANDLES(meet)).payload;
     }
 
     spell_int(total_meetings);

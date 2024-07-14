@@ -11,7 +11,7 @@ __asm__("fn:"
 
 int main(void) {
     seff_coroutine_t *k = seff_coroutine_new(fn, NULL);
-    seff_request_t req = seff_resume(k, NULL);
+    seff_request_t req = seff_resume_handling_all(k, NULL);
     assert(req.effect == EFF_ID(return));
     void *rsp = req.payload;
 

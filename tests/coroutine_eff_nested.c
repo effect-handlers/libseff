@@ -48,14 +48,14 @@ void *nested(void *args) {
 void *parent(void *args) {
     seff_coroutine_t *toplevel = seff_current_coroutine();
     seff_coroutine_t *child = seff_coroutine_new(nested, toplevel);
-    seff_handle(child, NULL, HANDLES(read));
+    seff_resume(child, NULL, HANDLES(read));
 
     for (size_t i = 0; i < 3; i++) {
         bounce("parent");
         char i_str[2];
         i_str[0] = '0' + i;
         i_str[1] = 0;
-        seff_handle(child, i_str, HANDLES(read));
+        seff_resume(child, i_str, HANDLES(read));
     }
 
     return NULL;
@@ -64,7 +64,7 @@ void *parent(void *args) {
 int main(void) {
     seff_coroutine_t *k = seff_coroutine_new(parent, NULL);
 
-    seff_request_t request = seff_handle(k, NULL, HANDLES(print) | HANDLES(read));
+    seff_request_t request = seff_resume(k, NULL, HANDLES(print) | HANDLES(read));
     while (!seff_finished(request)) {
         void *response;
         switch (request.effect) {
@@ -81,7 +81,7 @@ int main(void) {
             assert(false);
             exit(-1);
         }
-        request = seff_handle(k, response, HANDLES(print) | HANDLES(read));
+        request = seff_resume(k, response, HANDLES(print) | HANDLES(read));
     }
     seff_coroutine_delete(k);
 }

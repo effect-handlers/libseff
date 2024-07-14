@@ -205,7 +205,7 @@ void *scheff_worker_thread(void *_self) {
         }
         current_task->poll_condition = NULL;
 
-        seff_request_t request = seff_handle(&current_task->coroutine, NULL,
+        seff_request_t request = seff_resume(&current_task->coroutine, NULL,
             HANDLES(fork) | HANDLES(poll) | HANDLES(sleep) | HANDLES(wake));
         switch (request.effect) {
             CASE_RETURN(request, {

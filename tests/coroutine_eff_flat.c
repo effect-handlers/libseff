@@ -27,16 +27,16 @@ void *effectful_body(void *args) {
 int main(void) {
     seff_coroutine_t *k = seff_coroutine_new(effectful_body, NULL);
 
-    seff_request_t request = seff_resume(k, NULL);
+    seff_request_t request = seff_resume_handling_all(k, NULL);
 
     for (size_t i = 0; i < 5; i++) {
         switch (request.effect) {
         case PRINT_CODE:
-            puts((char*)request.payload);
-            request = seff_resume(k, NULL);
+            puts((char *)request.payload);
+            request = seff_resume_handling_all(k, NULL);
             break;
         case READ_CODE:
-            request = seff_resume(k, "MSG");
+            request = seff_resume_handling_all(k, "MSG");
             break;
         default:
             assert(false);

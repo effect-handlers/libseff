@@ -23,12 +23,12 @@
 
 .global seff_exit
 .global seff_yield
-.global seff_handle
+.global seff_resume
 .global coroutine_prelude
 
 .type seff_exit,%function
 .type seff_yield,%function
-.type seff_handle,%function
+.type seff_resume,%function
 .type coroutine_prelude,%function
 
 .global _seff_current_coroutine
@@ -131,8 +131,8 @@ seff_yield:
     .cfi_endproc
 .size seff_yield, . - seff_yield
 
-# void* seff_handle(seff_coroutine_t* k, void* arg, effect_set handled)
-seff_handle:
+# void* seff_resume(seff_coroutine_t* k, void* arg, effect_set handled)
+seff_resume:
     .cfi_startproc
     # k in %rdi
     # arg in %rsi
@@ -173,9 +173,9 @@ seff_handle:
     # this as the system stack if possible. Note that we need to do this
     # before clobbering RCX
     test %rcx, %rcx
-    jnz seff_handle_after_store_system_stack
+    jnz seff_resume_after_store_system_stack
     movq %rsp, %fs:_seff_system_stack@tpoff
-seff_handle_after_store_system_stack:
+seff_resume_after_store_system_stack:
 
     # Stack
     swap_stack
@@ -183,7 +183,7 @@ seff_handle_after_store_system_stack:
     movq %rsi, %rax
     jmp *%r10
     .cfi_endproc
-.size seff_handle, . - seff_handle
+.size seff_resume, . - seff_resume
 
 # void coroutine_prelude(seff_coroutine_t *k, seff_start_fun_t *fn, void *arg);
 # k in r13

@@ -17,7 +17,7 @@ void *effectful(void *arg) {
 void dummy(void) __attribute__((optnone)) { free(NULL); }
 
 void handle(seff_coroutine_t *k) {
-    seff_request_t req = seff_handle(k, NULL, HANDLES(put));
+    seff_request_t req = seff_resume(k, NULL, HANDLES(put));
     switch (req.effect) {
         CASE_EFFECT(req, put, {
             dummy();
