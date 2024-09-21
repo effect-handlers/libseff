@@ -22,7 +22,7 @@
 #include <poll.h>
 #include <string.h>
 #include <strings.h>
-#include <sys/epoll.h>
+// #include <sys/epoll.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -123,7 +123,7 @@ typedef enum : uint32_t {
     WRITE = POLLOUT,
     HANGUP = POLLHUP,
     ERROR = POLLERR,
-    ET = EPOLLET
+    // ET = EPOLLET
 } event_t;
 
 bool poll_await_condition(void *_arg) {
@@ -134,7 +134,7 @@ bool poll_await_condition(void *_arg) {
 
 short poll_await(int fd, uint32_t awaiting_events) {
     // Only valid with epoll
-    assert(!(awaiting_events & EPOLLET));
+    //assert(!(awaiting_events & EPOLLET));
     struct pollfd polls;
     polls.events = (short)awaiting_events;
     polls.fd = fd;
