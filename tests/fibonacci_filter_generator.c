@@ -62,7 +62,7 @@ int main(void) {
     int64_t next_elt;
     for (int i = 0; i < 1000; i++) {
         seff_request_t req = seff_resume_handling_all(filter_fib, fib);
-        if (seff_finished(req) == FINISHED) {
+        if (seff_finished(req)) {
             break;
         } else {
             next_elt = (int64_t)req.payload;
