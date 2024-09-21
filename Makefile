@@ -64,8 +64,8 @@ asm/seff_types.S: decls/seff_types.py decls/generate.py
 output/seff.o: src/seff.c src/seff.h src/seff_types.h | output
 	$(CC) $(CFLAGS) -I./src -o output/seff.o -c src/seff.c
 
-output/seff_asm.o: asm/seff.S asm/seff_types.S | output
-	$(CC) $(CFLAGS) -I./asm -o output/seff_asm.o -c asm/seff.S
+output/seff_asm.o: asm/seff-${ARCH}.S asm/seff_types.S | output
+	$(CC) $(CFLAGS) -I./asm -o output/seff_asm.o -c asm/seff-${ARCH}.S
 
 output/seff_mem.o: src/mem/seff_mem_${STACK_POLICY}.c src/mem/seff_mem.h src/seff_types.h | output
 	$(CC) $(CFLAGS) -I./src -o output/seff_mem.o -c src/mem/seff_mem_${STACK_POLICY}.c

@@ -20,7 +20,8 @@ import argparse
 parser = argparse.ArgumentParser()
 
 x86_64 = 'x86-64'
-parser.add_argument('--arch', choices=[x86_64], default=x86_64)
+aarch64 = 'aarch64'
+parser.add_argument('--arch', choices=[x86_64, aarch64], default=x86_64)
 
 segmented = 'segmented'
 fixed = 'fixed'
@@ -38,6 +39,11 @@ if args.sequence_counters:
 if args.arch == x86_64:
     arch = Architecture(64)
     generate.arch = arch
+    Defn('SEFF_ARCH_X86_64')
+elif args.arch == aarch64:
+    arch = Architecture(64)
+    generate.arch = arch
+    Defn('SEFF_ARCH_AARCH64')
 else:
     print(f"Fatal error: unsupported architecture {args.arch}")
     exit()
@@ -73,14 +79,33 @@ cont_fields = [
 
     Field('rsp', ptr(void)),
     Field('rbp', ptr(void)),
-
     Field('ip', ptr(void)),
-    Field('rbx', ptr(void)),
-    Field('r12', ptr(void)),
-    Field('r13', ptr(void)),
-    Field('r14', ptr(void)),
-    Field('r15', ptr(void)),
 ]
+if args.arch == x86_64:
+    cont_fields.extend([
+        Field('rbx', ptr(void)),
+        Field('r12', ptr(void)),
+        Field('r13', ptr(void)),
+        Field('r14', ptr(void)),
+        Field('r15', ptr(void)),
+    ])
+elif args.arch == aarch64:
+    cont_fields.extend([
+        Field('r19', ptr(void)),
+        Field('r20', ptr(void)),
+        Field('r21', ptr(void)),
+        Field('r22', ptr(void)),
+        Field('r23', ptr(void)),
+        Field('r24', ptr(void)),
+        Field('r25', ptr(void)),
+        Field('r26', ptr(void)),
+        Field('r27', ptr(void)),
+        Field('r28', ptr(void)),
+    ])
+else:
+    print(f"Fatal error: unsupported architecture {args.arch}")
+    exit()
+
 if stack_policy == segmented:
     cont_fields.insert(0, Field('stack_top', ptr(void)))
 cont = Struct('seff_cont_t', *cont_fields)

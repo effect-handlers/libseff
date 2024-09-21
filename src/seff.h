@@ -81,6 +81,7 @@ E __attribute__((noreturn, no_split_stack)) void seff_exit(
 E __attribute__((noreturn)) void seff_throw(effect_id eff_id, void *payload);
 
 // TODO: this is architecture specific
+#ifdef SEFF_ARCH_X86_64
 #define MAKE_SYSCALL_WRAPPER(ret, fn, ...)                                                        \
     ret __attribute__((no_split_stack)) fn##_syscall_wrapper(__VA_ARGS__);                        \
     __asm__(#fn "_syscall_wrapper:"                                                               \
@@ -96,6 +97,14 @@ E __attribute__((noreturn)) void seff_throw(effect_id eff_id, void *payload);
                             "movq %fs:_seff_paused_coroutine_stack_top@TPOFF, %rcx;", "",         \
                             "") "movq %rcx, %fs:0x70;"                                            \
                                 "retq;")
+#elif defined(SEFF_ARCH_AARCH64)
+#define MAKE_SYSCALL_WRAPPER(ret, fn, ...)                                                        \
+    ret __attribute__((no_split_stack)) fn##_syscall_wrapper(__VA_ARGS__);                        \
+    __asm__(#fn "_syscall_wrapper:"                                                               \
+                "b " #fn)
+#else
+#error Architecture not supported for MAKE_SYSCALL_WRAPPER
+#endif
 
 #define EFF_ID(name) __##name##_eff_id
 #define EFF_PAYLOAD_T(name) __##name##_eff_payload

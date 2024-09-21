@@ -6,7 +6,11 @@
 
 void *fn(void *arg);
 __asm__("fn:"
+#ifdef SEFF_ARCH_X86_64
         "movq %rsp, %rax;"
+#else
+        "mov x0, sp;"
+#endif
         "ret;");
 
 int main(void) {

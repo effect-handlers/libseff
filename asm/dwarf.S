@@ -47,3 +47,5 @@
 #define DW_REG_r14                14
 #define DW_REG_r15                15
 #define DW_REG_rip                16
+
+#define DW_REG_aarch64_r26       26
