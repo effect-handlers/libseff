@@ -1,5 +1,5 @@
 #include "seff.h"
-#include <alloca.h>
+#include <stdlib.h>
 #include <stdio.h>
 
 void heavy_hello(void) {
