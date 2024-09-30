@@ -11,7 +11,7 @@
 # See the Mulan PSL v2 for more details.
 #
 # Architecture-specific code for context-switching
-# This file is for the System V (Linux/OSX) 64 bit architecture
+# This file is for the Arm's AArch64 instruction set architecture
 #
 
 #include "dwarf.S"
