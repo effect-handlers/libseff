@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef STACK_POLICY_SEGMENTED
 void *fn(void *arg);
 __asm__("fn:"
         "movq $0xFFFFFFFFFFFFFFFF, -0x08(%rsp);"
@@ -37,3 +38,8 @@ int main(void) {
 
     return (uintptr_t)k->frame_ptr->canary;
 }
+#else
+int main(void) {
+    return 0;
+}
+#endif
