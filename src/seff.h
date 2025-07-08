@@ -100,7 +100,7 @@ E __attribute__((noreturn)) void seff_throw(effect_id eff_id, void *payload);
 #define EFF_ID(name) __##name##_eff_id
 #define EFF_PAYLOAD_T(name) __##name##_eff_payload
 #define EFF_RET_T(name) __##name##_eff_ret
-#define HANDLES(name) (1 << EFF_ID(name))
+#define HANDLES(name) (1UL << EFF_ID(name))
 
 #define CASE_EFFECT(request, name, block)                                      \
     case EFF_ID(name): {                                                       \
