@@ -129,7 +129,7 @@ bool seff_coroutine_init_sized(
 }
 
 seff_coroutine_t *seff_locate_handler(effect_id effect) {
-    effect_set mask = 1 << effect;
+    effect_set mask = 1UL << effect;
     seff_coroutine_t *k = _seff_current_coroutine;
     if (effect != EFF_ID(return)) {
         // Thee special 'return' effect is implicitly handled by every coroutine
